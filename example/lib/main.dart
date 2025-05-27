@@ -1,4 +1,5 @@
 import 'package:blankets_and_wines/blankets_and_wines.dart';
+import 'package:blankets_and_wines_example/core/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -42,44 +43,7 @@ class BarPOSApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Cashier System',
-      theme: ThemeData(
-        primarySwatch: Colors.indigo,
-        scaffoldBackgroundColor: Color(0xFF1A1A2E),
-        appBarTheme: AppBarTheme(
-          backgroundColor: Color(0xFF16213E),
-          elevation: 0,
-          titleTextStyle: TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        textTheme: TextTheme(
-          headlineLarge: TextStyle(
-            color: Colors.white,
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-          ),
-          headlineMedium: TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-          bodyLarge: TextStyle(color: Colors.white, fontSize: 18),
-          bodyMedium: TextStyle(color: Colors.white70, fontSize: 16),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF0F3460),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-            textStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-      ),
+      theme: BarPOSTheme.darkTheme, // Use the centralized theme
       home: POSMainScreen(),
       debugShowCheckedModeBanner: false,
     );
@@ -92,6 +56,7 @@ class DrinkItem {
   final String category;
   final double price;
   final String image;
+  final int quantity;
 
   DrinkItem({
     required this.id,
@@ -99,6 +64,7 @@ class DrinkItem {
     required this.category,
     required this.price,
     required this.image,
+    required this.quantity,
   });
 }
 
@@ -139,6 +105,7 @@ class _POSMainScreenState extends State<POSMainScreen> {
       category: 'Beer',
       price: 5.50,
       image: '🍺',
+      quantity: 20,
     ),
     DrinkItem(
       id: '2',
@@ -146,6 +113,8 @@ class _POSMainScreenState extends State<POSMainScreen> {
       category: 'Beer',
       price: 6.00,
       image: '🍺',
+
+      quantity: 20,
     ),
     DrinkItem(
       id: '3',
@@ -153,6 +122,8 @@ class _POSMainScreenState extends State<POSMainScreen> {
       category: 'Beer',
       price: 6.50,
       image: '🍺',
+
+      quantity: 20,
     ),
     DrinkItem(
       id: '4',
@@ -160,6 +131,8 @@ class _POSMainScreenState extends State<POSMainScreen> {
       category: 'Wine',
       price: 12.00,
       image: '🍷',
+
+      quantity: 20,
     ),
     DrinkItem(
       id: '5',
@@ -167,6 +140,8 @@ class _POSMainScreenState extends State<POSMainScreen> {
       category: 'Wine',
       price: 11.00,
       image: '🍷',
+
+      quantity: 20,
     ),
     DrinkItem(
       id: '6',
@@ -174,6 +149,8 @@ class _POSMainScreenState extends State<POSMainScreen> {
       category: 'Wine',
       price: 10.50,
       image: '🍷',
+
+      quantity: 20,
     ),
     DrinkItem(
       id: '7',
@@ -181,6 +158,8 @@ class _POSMainScreenState extends State<POSMainScreen> {
       category: 'Cocktails',
       price: 9.00,
       image: '🍹',
+
+      quantity: 20,
     ),
     DrinkItem(
       id: '8',
@@ -188,6 +167,8 @@ class _POSMainScreenState extends State<POSMainScreen> {
       category: 'Cocktails',
       price: 9.50,
       image: '🍹',
+
+      quantity: 20,
     ),
     DrinkItem(
       id: '9',
@@ -195,6 +176,8 @@ class _POSMainScreenState extends State<POSMainScreen> {
       category: 'Cocktails',
       price: 11.00,
       image: '🥃',
+
+      quantity: 20,
     ),
     DrinkItem(
       id: '10',
@@ -202,6 +185,8 @@ class _POSMainScreenState extends State<POSMainScreen> {
       category: 'Spirits',
       price: 8.00,
       image: '🥃',
+
+      quantity: 20,
     ),
     DrinkItem(
       id: '11',
@@ -209,6 +194,8 @@ class _POSMainScreenState extends State<POSMainScreen> {
       category: 'Spirits',
       price: 7.50,
       image: '🥃',
+
+      quantity: 20,
     ),
     DrinkItem(
       id: '12',
@@ -216,6 +203,8 @@ class _POSMainScreenState extends State<POSMainScreen> {
       category: 'Spirits',
       price: 7.50,
       image: '🥃',
+
+      quantity: 20,
     ),
     DrinkItem(
       id: '13',
@@ -223,6 +212,8 @@ class _POSMainScreenState extends State<POSMainScreen> {
       category: 'Non-Alcoholic',
       price: 3.00,
       image: '🥤',
+
+      quantity: 20,
     ),
     DrinkItem(
       id: '14',
@@ -230,6 +221,7 @@ class _POSMainScreenState extends State<POSMainScreen> {
       category: 'Non-Alcoholic',
       price: 3.50,
       image: '🧃',
+      quantity: 20,
     ),
     DrinkItem(
       id: '15',
@@ -237,6 +229,7 @@ class _POSMainScreenState extends State<POSMainScreen> {
       category: 'Non-Alcoholic',
       price: 2.00,
       image: '💧',
+      quantity: 20,
     ),
   ];
 
@@ -313,7 +306,6 @@ class _POSMainScreenState extends State<POSMainScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Bar POS System'),
-        centerTitle: true,
         actions: [
           // Cart button for mobile/tablet
           if (!largeScreen)
@@ -325,28 +317,26 @@ class _POSMainScreenState extends State<POSMainScreen> {
                       isCartVisible = !isCartVisible;
                     });
                   },
-                  icon: Icon(
-                    Icons.shopping_cart,
-                    color: Colors.white,
-                    size: 28,
-                  ),
+                  icon: Icon(Icons.shopping_cart),
                 ),
                 if (cart.isNotEmpty)
                   Positioned(
                     right: 8,
                     top: 8,
                     child: Container(
-                      padding: EdgeInsets.all(4),
+                      padding: EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(10),
+                        color: BarPOSTheme.errorColor,
+                        borderRadius: BorderRadius.circular(
+                          BarPOSTheme.radiusSmall,
+                        ),
                       ),
-                      constraints: BoxConstraints(minWidth: 20, minHeight: 20),
+                      constraints: BoxConstraints(minWidth: 24, minHeight: 24),
                       child: Text(
                         '${cart.length}',
                         style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
+                          color: BarPOSTheme.primaryText,
+                          fontSize: BarPOSTheme.labelMedium,
                           fontWeight: FontWeight.bold,
                         ),
                         textAlign: TextAlign.center,
@@ -363,12 +353,13 @@ class _POSMainScreenState extends State<POSMainScreen> {
           !largeScreen && cart.isNotEmpty
               ? FloatingActionButton.extended(
                 onPressed: () => _showPaymentDialog(context),
-                backgroundColor: Color(0xFF4CAF50),
                 label: Text(
                   '\$${cartTotal.toStringAsFixed(2)}',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: BarPOSTheme.totalPriceTextStyle.copyWith(
+                    color: BarPOSTheme.primaryText,
+                  ),
                 ),
-                icon: Icon(Icons.payment),
+                icon: Icon(Icons.payment, size: 28),
               )
               : null,
     );
@@ -420,30 +411,18 @@ class _POSMainScreenState extends State<POSMainScreen> {
 
   Widget _buildMenuPanel() {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: BarPOSTheme.cardPadding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Search Bar
           Container(
-            margin: EdgeInsets.only(bottom: 16),
+            margin: EdgeInsets.only(bottom: BarPOSTheme.spacingL),
             child: TextField(
               controller: searchController,
-              style: TextStyle(color: Colors.white, fontSize: 16),
               decoration: InputDecoration(
                 hintText: 'Search drinks...',
-                hintStyle: TextStyle(color: Colors.white54, fontSize: 16),
-                prefixIcon: Icon(Icons.search, color: Colors.white54, size: 24),
-                filled: true,
-                fillColor: Color(0xFF16213E),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
+                prefixIcon: Icon(Icons.search, size: 32),
               ),
               onChanged: (value) {
                 setState(() {
@@ -455,8 +434,8 @@ class _POSMainScreenState extends State<POSMainScreen> {
 
           // Category Tabs
           Container(
-            height: 50,
-            margin: EdgeInsets.only(bottom: 16),
+            height: BarPOSTheme.buttonHeight,
+            margin: EdgeInsets.only(bottom: BarPOSTheme.spacingL),
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: categories.length,
@@ -464,7 +443,7 @@ class _POSMainScreenState extends State<POSMainScreen> {
                 final category = categories[index];
                 final isSelected = selectedCategory == category;
                 return Container(
-                  margin: EdgeInsets.only(right: 8),
+                  margin: EdgeInsets.only(right: BarPOSTheme.spacingS),
                   child: ElevatedButton(
                     onPressed: () {
                       setState(() {
@@ -473,16 +452,9 @@ class _POSMainScreenState extends State<POSMainScreen> {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
-                          isSelected ? Color(0xFF0F3460) : Color(0xFF16213E),
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      textStyle: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
+                          isSelected ? BarPOSTheme.buttonColor : BarPOSTheme.accentDark,
+                      foregroundColor: BarPOSTheme.primaryText,
+                      textStyle: BarPOSTheme.categoryTextStyle,
                     ),
                     child: Text(category),
                   ),
@@ -492,66 +464,173 @@ class _POSMainScreenState extends State<POSMainScreen> {
           ),
 
           // Drinks Grid
-          Expanded(
-            child: GridView.builder(
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: getGridCount(context),
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 0.85,
+       Expanded(
+  child: GridView.builder(
+    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: getGridCount(context),
+      crossAxisSpacing: BarPOSTheme.spacingM,
+      mainAxisSpacing: BarPOSTheme.spacingM,
+      childAspectRatio: 0.85,
+    ),
+    itemCount: filteredDrinks.length,
+    itemBuilder: (context, index) {
+      final drink = filteredDrinks[index];
+      // Find if drink is in cart and get its quantity
+      final cartItem = cart.firstWhere(
+        (item) => item.drink.id == drink.id,
+        orElse: () => CartItem(drink: drink, quantity: 0),
+      );
+      final isInCart = cartItem.quantity > 0;
+      
+      return GestureDetector(
+        onTap: () => addToCart(drink),
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: isInCart 
+                ? BarPOSTheme.successColor.withOpacity(0.1)
+                : BarPOSTheme.secondaryDark,
+            borderRadius: BorderRadius.circular(BarPOSTheme.radiusMedium),
+            border: Border.all(
+              color: isInCart 
+                  ? BarPOSTheme.successColor.withOpacity(0.3)
+                  : BarPOSTheme.accentDark.withOpacity(0.3),
+              width: isInCart ? 2 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: Offset(0, 2),
               ),
-              itemCount: filteredDrinks.length,
-              itemBuilder: (context, index) {
-                final drink = filteredDrinks[index];
-                return GestureDetector(
-                  onTap: () => addToCart(drink),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Color(0xFF16213E),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 6,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
+              if (isInCart)
+                BoxShadow(
+                  color: BarPOSTheme.successColor.withOpacity(0.1),
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
+                ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              Padding(
+                padding: EdgeInsets.all(BarPOSTheme.spacingM),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Drink emoji with modern styling
+                    Container(
+                      padding: EdgeInsets.all(BarPOSTheme.spacingS),
+                      decoration: BoxDecoration(
+                        color: BarPOSTheme.buttonColor.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(BarPOSTheme.radiusLarge),
+                      ),
+                      child: Text(
+                        drink.image, 
+                        style: TextStyle(fontSize: 48),
+                      ),
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(drink.image, style: TextStyle(fontSize: 32)),
-                        SizedBox(height: 8),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Text(
-                            drink.name,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                    SizedBox(height: BarPOSTheme.spacingM),
+                    
+                    // Drink name
+                    Text(
+                      drink.name,
+                      style: BarPOSTheme.itemNameTextStyle.copyWith(
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: BarPOSTheme.spacingS),
+                    
+                    // Price with modern styling
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: BarPOSTheme.spacingM,
+                        vertical: BarPOSTheme.spacingXS,
+                      ),
+                      decoration: BoxDecoration(
+                        color: BarPOSTheme.buttonColor.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(BarPOSTheme.radiusSmall),
+                      ),
+                      child: Text(
+                        '\$${drink.price.toStringAsFixed(2)}',
+                        style: BarPOSTheme.priceTextStyle.copyWith(
+                          fontWeight: FontWeight.bold,
                         ),
-                        SizedBox(height: 4),
-                        Text(
-                          '\$${drink.price.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            color: Color(0xFF4CAF50),
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Modern quantity badge
+              if (isInCart)
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: AnimatedScale(
+                    scale: 1.0,
+                    duration: Duration(milliseconds: 200),
+                    child: Container(
+                      constraints: BoxConstraints(
+                        minWidth: 28,
+                        minHeight: 28,
+                      ),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            BarPOSTheme.successColor,
+                            BarPOSTheme.successColor.withGreen(200),
+                          ],
                         ),
-                      ],
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: BarPOSTheme.successColor.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        '${cartItem.quantity}',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
-                );
-              },
-            ),
+                ),
+              
+              // Subtle hover/tap indication
+              Positioned.fill(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => addToCart(drink),
+                    borderRadius: BorderRadius.circular(BarPOSTheme.radiusMedium),
+                    splashColor: BarPOSTheme.buttonColor.withOpacity(0.2),
+                    highlightColor: BarPOSTheme.buttonColor.withOpacity(0.1),
+                  ),
+                ),
+              ),
+            ],
           ),
+        ),
+      );
+    },
+  ),
+),
         ],
       ),
     );
@@ -559,22 +638,18 @@ class _POSMainScreenState extends State<POSMainScreen> {
 
   Widget _buildCartPanel() {
     return Container(
-      color: Color(0xFF16213E),
+      decoration: BoxDecoration(color: BarPOSTheme.accentDark),
       child: Column(
         children: [
           // Cart Header
           Container(
-            padding: EdgeInsets.all(16),
+            padding: BarPOSTheme.cardPadding,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   'Current Order',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 Row(
                   children: [
@@ -583,8 +658,8 @@ class _POSMainScreenState extends State<POSMainScreen> {
                         onPressed: clearCart,
                         icon: Icon(
                           Icons.clear_all,
-                          color: Colors.red,
-                          size: 24,
+                          color: BarPOSTheme.errorColor,
+                          size: 28,
                         ),
                       ),
                     if (!isLargeScreen(context))
@@ -594,7 +669,7 @@ class _POSMainScreenState extends State<POSMainScreen> {
                             isCartVisible = false;
                           });
                         },
-                        icon: Icon(Icons.close, color: Colors.white, size: 24),
+                        icon: Icon(Icons.close, size: 28),
                       ),
                   ],
                 ),
@@ -612,32 +687,29 @@ class _POSMainScreenState extends State<POSMainScreen> {
                         children: [
                           Icon(
                             Icons.shopping_cart_outlined,
-                            color: Colors.white54,
-                            size: 48,
+                            color: BarPOSTheme.secondaryText,
+                            size: 64,
                           ),
-                          SizedBox(height: 12),
+                          SizedBox(height: BarPOSTheme.spacingM),
                           Text(
                             'No items in cart',
-                            style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 16,
-                            ),
+                            style: Theme.of(context).textTheme.bodyLarge
+                                ?.copyWith(color: BarPOSTheme.secondaryText),
                           ),
                         ],
                       ),
                     )
                     : ListView.builder(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: BarPOSTheme.spacingL,
+                      ),
                       itemCount: cart.length,
                       itemBuilder: (context, index) {
                         final item = cart[index];
                         return Container(
-                          margin: EdgeInsets.only(bottom: 8),
-                          padding: EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Color(0xFF0F3460),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                          margin: EdgeInsets.only(bottom: BarPOSTheme.spacingS),
+                          padding: BarPOSTheme.cardPadding,
+                          decoration: BarPOSTheme.buttonCardDecoration,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -648,11 +720,7 @@ class _POSMainScreenState extends State<POSMainScreen> {
                                   Expanded(
                                     child: Text(
                                       item.drink.name,
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                      style: BarPOSTheme.itemNameTextStyle,
                                     ),
                                   ),
                                   IconButton(
@@ -660,15 +728,15 @@ class _POSMainScreenState extends State<POSMainScreen> {
                                         () => removeFromCart(item.drink.id),
                                     icon: Icon(
                                       Icons.delete,
-                                      color: Colors.red,
-                                      size: 18,
+                                      color: BarPOSTheme.errorColor,
+                                      size: 24,
                                     ),
                                     constraints: BoxConstraints(),
                                     padding: EdgeInsets.all(4),
                                   ),
                                 ],
                               ),
-                              SizedBox(height: 4),
+                              SizedBox(height: BarPOSTheme.spacingXS),
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
@@ -684,23 +752,19 @@ class _POSMainScreenState extends State<POSMainScreen> {
                                             ),
                                         icon: Icon(
                                           Icons.remove_circle,
-                                          color: Colors.white70,
-                                          size: 20,
+                                          color: BarPOSTheme.secondaryText,
+                                          size: 28,
                                         ),
                                         constraints: BoxConstraints(),
-                                        padding: EdgeInsets.all(4),
+                                        padding: EdgeInsets.all(6),
                                       ),
                                       Padding(
                                         padding: EdgeInsets.symmetric(
-                                          horizontal: 8,
+                                          horizontal: BarPOSTheme.spacingM,
                                         ),
                                         child: Text(
                                           '${item.quantity}',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                          style: BarPOSTheme.quantityTextStyle,
                                         ),
                                       ),
                                       IconButton(
@@ -711,21 +775,17 @@ class _POSMainScreenState extends State<POSMainScreen> {
                                             ),
                                         icon: Icon(
                                           Icons.add_circle,
-                                          color: Colors.white70,
-                                          size: 20,
+                                          color: BarPOSTheme.secondaryText,
+                                          size: 28,
                                         ),
                                         constraints: BoxConstraints(),
-                                        padding: EdgeInsets.all(4),
+                                        padding: EdgeInsets.all(6),
                                       ),
                                     ],
                                   ),
                                   Text(
                                     '\$${item.totalPrice.toStringAsFixed(2)}',
-                                    style: TextStyle(
-                                      color: Color(0xFF4CAF50),
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: BarPOSTheme.priceTextStyle,
                                   ),
                                 ],
                               ),
@@ -739,12 +799,12 @@ class _POSMainScreenState extends State<POSMainScreen> {
           // Total and Checkout
           if (cart.isNotEmpty)
             Container(
-              padding: EdgeInsets.all(16),
+              padding: BarPOSTheme.cardPaddingLarge,
               decoration: BoxDecoration(
-                color: Color(0xFF0F3460),
+                color: BarPOSTheme.buttonColor,
                 borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
+                  topLeft: Radius.circular(BarPOSTheme.radiusLarge),
+                  topRight: Radius.circular(BarPOSTheme.radiusLarge),
                 ),
               ),
               child: Column(
@@ -754,38 +814,23 @@ class _POSMainScreenState extends State<POSMainScreen> {
                     children: [
                       Text(
                         'Total:',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context).textTheme.headlineSmall,
                       ),
                       Text(
                         '\$${cartTotal.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          color: Color(0xFF4CAF50),
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: BarPOSTheme.totalPriceTextStyle,
                       ),
                     ],
                   ),
-                  SizedBox(height: 16),
+                  SizedBox(height: BarPOSTheme.spacingL),
                   SizedBox(
                     width: double.infinity,
-                    height: 50,
+                    height: BarPOSTheme.buttonHeight,
                     child: ElevatedButton(
                       onPressed: () => _showPaymentDialog(context),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF4CAF50),
-                        foregroundColor: Colors.white,
-                        textStyle: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        backgroundColor: BarPOSTheme.successColor,
+                        foregroundColor: BarPOSTheme.primaryText,
                       ),
                       child: Text('Confirm Payment'),
                     ),
@@ -803,54 +848,33 @@ class _POSMainScreenState extends State<POSMainScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: Color(0xFF16213E),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Text(
-            'Confirm Payment',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          title: Text('Confirm Payment'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 'Total Amount: \$${cartTotal.toStringAsFixed(2)}',
-                style: TextStyle(
-                  color: Color(0xFF4CAF50),
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: BarPOSTheme.totalPriceTextStyle,
               ),
-              SizedBox(height: 16),
-              Text(
-                'Confirm payment received?',
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
+              SizedBox(height: BarPOSTheme.spacingM),
+              Text('Are you sure you want to process this payment?'),
             ],
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: Colors.white70, fontSize: 16),
-              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
             ),
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
-
-                _processSale();
+                _processPayment();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF4CAF50),
-                foregroundColor: Colors.white,
-                textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                backgroundColor: BarPOSTheme.successColor,
+                foregroundColor: BarPOSTheme.primaryText,
               ),
               child: Text('Confirm'),
             ),
@@ -860,113 +884,78 @@ class _POSMainScreenState extends State<POSMainScreen> {
     );
   }
 
-  void _processSale() async {
-    String orderNumber = "ORD-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}";
-    
+  void _processPayment() async {
+    String orderNumber =
+        "ORD-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}";
+
     print("Processing sale with order number: $orderNumber");
-    
+
     try {
-        await SmartposPlugin.printReceipt({
-            "storeName": "The Local Bar & Grill",
-            "date": DateFormat('yyyy-MM-dd').format(DateTime.now()),
-            "time": DateFormat('HH:mm:ss').format(DateTime.now()),
-            "orderNumber": orderNumber,
-            "items": cart.map((item) => {
-                "name": item.drink.name,
-                "quantity": item.quantity,
-                "price": item.totalPrice.toStringAsFixed(2)
-            }).toList(),
-            "subtotal": (cartTotal * 0.9).toStringAsFixed(2), // Assuming 10% tax
-            "tax": (cartTotal * 0.1).toStringAsFixed(2),
-            "total": cartTotal.toStringAsFixed(2),
-            "paymentMethod": "Cash", // You can make this dynamic
-        });
-        
-        // Show success message with order number
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text('Order placed successfully! Order #$orderNumber'),
-                backgroundColor: Colors.green,
-                duration: Duration(seconds: 3),
-            ),
-        );
-        
-        // // Clear cart after successful payment
-        // setState(() {
-        //     cart.clear();
-        // });
-        
+      await SmartposPlugin.printReceipt({
+        "storeName": "The Local Bar & Grill",
+        "date": DateFormat('yyyy-MM-dd').format(DateTime.now()),
+        "time": DateFormat('HH:mm:ss').format(DateTime.now()),
+        "orderNumber": orderNumber,
+        "items":
+            cart
+                .map(
+                  (item) => {
+                    "name": item.drink.name,
+                    "quantity": item.quantity,
+                    "price": item.totalPrice.toStringAsFixed(2),
+                  },
+                )
+                .toList(),
+        "subtotal": (cartTotal * 0.9).toStringAsFixed(2), // Assuming 10% tax
+        "tax": (cartTotal * 0.1).toStringAsFixed(2),
+        "total": cartTotal.toStringAsFixed(2),
+        "paymentMethod": "Cash", // You can make this dynamic
+      });
+
+      // Show success message with order number
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Order placed successfully! Order #$orderNumber'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
+        ),
+      );
+
+      // // Clear cart after successful payment
+      // setState(() {
+      //     cart.clear();
+      // });
     } catch (e) {
-        print("Error printing receipt: $e");
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text('Error processing order: $e'),
-                backgroundColor: Colors.red,
-            ),
-        );
+      print("Error printing receipt: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error processing order: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
 
-    // 'Bar POS Sale Receipt\n' +
-    // '====================\n' +
-    // 'Date: ${DateTime.now()}\n' +
-    // 'Items:\n' +
-    // cart.map((item) => '${item.drink.name} x${item.quantity} - \$${item.totalPrice.toStringAsFixed(2)}').join('\n') +
-    // '\nTotal: \$${cartTotal.toStringAsFixed(2)}\n' +
-    // 'Thank you for your order!\n\n\n',
-    // fontSize: 40,
-    // alignment: 'CENTER',);
-
-    // Show success dialog
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Color(0xFF16213E),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Row(
-            children: [
-              Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 28),
-              SizedBox(width: 8),
-              Text(
-                'Sale Complete!',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          content: Text(
-            'Payment of \$${cartTotal.toStringAsFixed(2)} confirmed.\nSale has been recorded.',
-            style: TextStyle(color: Colors.white, fontSize: 16),
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                clearCart();
-                if (!isLargeScreen(context)) {
-                  setState(() {
-                    isCartVisible = false;
-                  });
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF4CAF50),
-                foregroundColor: Colors.white,
-                textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              child: Text('New Order'),
-            ),
-          ],
-        );
-      },
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Payment processed successfully!'),
+        backgroundColor: BarPOSTheme.successColor,
+        duration: Duration(seconds: 2),
+      ),
     );
+
+    // Clear the cart
+    clearCart();
+
+    // Close cart panel if on mobile
+    if (!isLargeScreen(context)) {
+      setState(() {
+        isCartVisible = false;
+      });
+    }
   }
 }
+
 
 // class MyApp extends StatefulWidget {
 //   @override
