@@ -23,7 +23,7 @@ class BarPOSTheme {
   static const double headlineLarge = 34.0;
   static const double headlineMedium = 30.0;
   static const double headlineSmall = 26.0;
-  static const double titleLarge = 24.0;
+  static const double titleLarge = 30.0;
   static const double titleMedium = 22.0;
   static const double titleSmall = 20.0;
   static const double bodyLarge = 22.0;

@@ -305,7 +305,8 @@ class _POSMainScreenState extends State<POSMainScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Bar POS System'),
+        title: Text('Cashier System'),
+      
         actions: [
           // Cart button for mobile/tablet
           if (!largeScreen)
@@ -556,7 +557,7 @@ class _POSMainScreenState extends State<POSMainScreen> {
                         borderRadius: BorderRadius.circular(BarPOSTheme.radiusSmall),
                       ),
                       child: Text(
-                        '\$${drink.price.toStringAsFixed(2)}',
+                        '\kshs ${drink.price.toStringAsFixed(2)}',
                         style: BarPOSTheme.priceTextStyle.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -576,12 +577,12 @@ class _POSMainScreenState extends State<POSMainScreen> {
                     duration: Duration(milliseconds: 200),
                     child: Container(
                       constraints: BoxConstraints(
-                        minWidth: 28,
-                        minHeight: 28,
+                        minWidth: 32,
+                        minHeight: 32,
                       ),
                       padding: EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+                        horizontal: 10,
+                        vertical: 10,
                       ),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -604,7 +605,7 @@ class _POSMainScreenState extends State<POSMainScreen> {
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                          fontSize: 34,
                         ),
                         textAlign: TextAlign.center,
                       ),
