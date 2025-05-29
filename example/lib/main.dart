@@ -1,5 +1,6 @@
 import 'package:blankets_and_wines/blankets_and_wines.dart';
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
+import 'package:blankets_and_wines_example/features/Stockist/Stockist.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -34,8 +35,24 @@ void main() async {
     log('Initialization error: $e');
     log('Stacktrace: $stacktrace');
   }
+  runApp(MyApp()
+    // StockistMainScreen()
+    );
+  // runApp(BarPOSApp());
+}
 
-  runApp(BarPOSApp());
+class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(home: StockistMainScreen());
+  }
 }
 
 class BarPOSApp extends StatelessWidget {
@@ -306,7 +323,7 @@ class _POSMainScreenState extends State<POSMainScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Cashier System'),
-      
+
         actions: [
           // Cart button for mobile/tablet
           if (!largeScreen)
@@ -453,7 +470,9 @@ class _POSMainScreenState extends State<POSMainScreen> {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
-                          isSelected ? BarPOSTheme.buttonColor : BarPOSTheme.accentDark,
+                          isSelected
+                              ? BarPOSTheme.buttonColor
+                              : BarPOSTheme.accentDark,
                       foregroundColor: BarPOSTheme.primaryText,
                       textStyle: BarPOSTheme.categoryTextStyle,
                     ),
@@ -465,173 +484,191 @@ class _POSMainScreenState extends State<POSMainScreen> {
           ),
 
           // Drinks Grid
-       Expanded(
-  child: GridView.builder(
-    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount: getGridCount(context),
-      crossAxisSpacing: BarPOSTheme.spacingM,
-      mainAxisSpacing: BarPOSTheme.spacingM,
-      childAspectRatio: 0.85,
-    ),
-    itemCount: filteredDrinks.length,
-    itemBuilder: (context, index) {
-      final drink = filteredDrinks[index];
-      // Find if drink is in cart and get its quantity
-      final cartItem = cart.firstWhere(
-        (item) => item.drink.id == drink.id,
-        orElse: () => CartItem(drink: drink, quantity: 0),
-      );
-      final isInCart = cartItem.quantity > 0;
-      
-      return GestureDetector(
-        onTap: () => addToCart(drink),
-        child: AnimatedContainer(
-          duration: Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            color: isInCart 
-                ? BarPOSTheme.successColor.withOpacity(0.1)
-                : BarPOSTheme.secondaryDark,
-            borderRadius: BorderRadius.circular(BarPOSTheme.radiusMedium),
-            border: Border.all(
-              color: isInCart 
-                  ? BarPOSTheme.successColor.withOpacity(0.3)
-                  : BarPOSTheme.accentDark.withOpacity(0.3),
-              width: isInCart ? 2 : 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 8,
-                offset: Offset(0, 2),
+          Expanded(
+            child: GridView.builder(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: getGridCount(context),
+                crossAxisSpacing: BarPOSTheme.spacingM,
+                mainAxisSpacing: BarPOSTheme.spacingM,
+                childAspectRatio: 0.85,
               ),
-              if (isInCart)
-                BoxShadow(
-                  color: BarPOSTheme.successColor.withOpacity(0.1),
-                  blurRadius: 12,
-                  offset: Offset(0, 4),
-                ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              Padding(
-                padding: EdgeInsets.all(BarPOSTheme.spacingM),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Drink emoji with modern styling
-                    Container(
-                      padding: EdgeInsets.all(BarPOSTheme.spacingS),
-                      decoration: BoxDecoration(
-                        color: BarPOSTheme.buttonColor.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(BarPOSTheme.radiusLarge),
-                      ),
-                      child: Text(
-                        drink.image, 
-                        style: TextStyle(fontSize: 48),
-                      ),
-                    ),
-                    SizedBox(height: BarPOSTheme.spacingM),
-                    
-                    // Drink name
-                    Text(
-                      drink.name,
-                      style: BarPOSTheme.itemNameTextStyle.copyWith(
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.2,
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    SizedBox(height: BarPOSTheme.spacingS),
-                    
-                    // Price with modern styling
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: BarPOSTheme.spacingM,
-                        vertical: BarPOSTheme.spacingXS,
-                      ),
-                      decoration: BoxDecoration(
-                        color: BarPOSTheme.buttonColor.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(BarPOSTheme.radiusSmall),
-                      ),
-                      child: Text(
-                        '\kshs ${drink.price.toStringAsFixed(2)}',
-                        style: BarPOSTheme.priceTextStyle.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Modern quantity badge
-              if (isInCart)
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: AnimatedScale(
-                    scale: 1.0,
+              itemCount: filteredDrinks.length,
+              itemBuilder: (context, index) {
+                final drink = filteredDrinks[index];
+                // Find if drink is in cart and get its quantity
+                final cartItem = cart.firstWhere(
+                  (item) => item.drink.id == drink.id,
+                  orElse: () => CartItem(drink: drink, quantity: 0),
+                );
+                final isInCart = cartItem.quantity > 0;
+
+                return GestureDetector(
+                  onTap: () => addToCart(drink),
+                  child: AnimatedContainer(
                     duration: Duration(milliseconds: 200),
-                    child: Container(
-                      constraints: BoxConstraints(
-                        minWidth: 32,
-                        minHeight: 32,
+                    decoration: BoxDecoration(
+                      color:
+                          isInCart
+                              ? BarPOSTheme.successColor.withOpacity(0.1)
+                              : BarPOSTheme.secondaryDark,
+                      borderRadius: BorderRadius.circular(
+                        BarPOSTheme.radiusMedium,
                       ),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 10,
+                      border: Border.all(
+                        color:
+                            isInCart
+                                ? BarPOSTheme.successColor.withOpacity(0.3)
+                                : BarPOSTheme.accentDark.withOpacity(0.3),
+                        width: isInCart ? 2 : 1,
                       ),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            BarPOSTheme.successColor,
-                            BarPOSTheme.successColor.withGreen(200),
-                          ],
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
                         ),
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
+                        if (isInCart)
                           BoxShadow(
-                            color: BarPOSTheme.successColor.withOpacity(0.3),
-                            blurRadius: 8,
-                            offset: Offset(0, 2),
+                            color: BarPOSTheme.successColor.withOpacity(0.1),
+                            blurRadius: 12,
+                            offset: Offset(0, 4),
                           ),
-                        ],
-                      ),
-                      child: Text(
-                        '${cartItem.quantity}',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 34,
+                      ],
+                    ),
+                    child: Stack(
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.all(BarPOSTheme.spacingM),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              // Drink emoji with modern styling
+                              Container(
+                                padding: EdgeInsets.all(BarPOSTheme.spacingS),
+                                decoration: BoxDecoration(
+                                  color: BarPOSTheme.buttonColor.withOpacity(
+                                    0.2,
+                                  ),
+                                  borderRadius: BorderRadius.circular(
+                                    BarPOSTheme.radiusLarge,
+                                  ),
+                                ),
+                                child: Text(
+                                  drink.image,
+                                  style: TextStyle(fontSize: 48),
+                                ),
+                              ),
+                              SizedBox(height: BarPOSTheme.spacingM),
+
+                              // Drink name
+                              Text(
+                                drink.name,
+                                style: BarPOSTheme.itemNameTextStyle.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.2,
+                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              SizedBox(height: BarPOSTheme.spacingS),
+
+                              // Price with modern styling
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: BarPOSTheme.spacingM,
+                                  vertical: BarPOSTheme.spacingXS,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: BarPOSTheme.buttonColor.withOpacity(
+                                    0.2,
+                                  ),
+                                  borderRadius: BorderRadius.circular(
+                                    BarPOSTheme.radiusSmall,
+                                  ),
+                                ),
+                                child: Text(
+                                  '\kshs ${drink.price.toStringAsFixed(2)}',
+                                  style: BarPOSTheme.priceTextStyle.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        textAlign: TextAlign.center,
-                      ),
+
+                        // Modern quantity badge
+                        if (isInCart)
+                          Positioned(
+                            top: 12,
+                            right: 12,
+                            child: AnimatedScale(
+                              scale: 1.0,
+                              duration: Duration(milliseconds: 200),
+                              child: Container(
+                                constraints: BoxConstraints(
+                                  minWidth: 32,
+                                  minHeight: 32,
+                                ),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      BarPOSTheme.successColor,
+                                      BarPOSTheme.successColor.withGreen(200),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(14),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: BarPOSTheme.successColor
+                                          .withOpacity(0.3),
+                                      blurRadius: 8,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  '${cartItem.quantity}',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 34,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                        // Subtle hover/tap indication
+                        Positioned.fill(
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => addToCart(drink),
+                              borderRadius: BorderRadius.circular(
+                                BarPOSTheme.radiusMedium,
+                              ),
+                              splashColor: BarPOSTheme.buttonColor.withOpacity(
+                                0.2,
+                              ),
+                              highlightColor: BarPOSTheme.buttonColor
+                                  .withOpacity(0.1),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              
-              // Subtle hover/tap indication
-              Positioned.fill(
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => addToCart(drink),
-                    borderRadius: BorderRadius.circular(BarPOSTheme.radiusMedium),
-                    splashColor: BarPOSTheme.buttonColor.withOpacity(0.2),
-                    highlightColor: BarPOSTheme.buttonColor.withOpacity(0.1),
-                  ),
-                ),
-              ),
-            ],
+                );
+              },
+            ),
           ),
-        ),
-      );
-    },
-  ),
-),
         ],
       ),
     );
@@ -912,6 +949,8 @@ class _POSMainScreenState extends State<POSMainScreen> {
         "total": cartTotal.toStringAsFixed(2),
         "paymentMethod": "Cash", // You can make this dynamic
       });
+
+      //  await SmartposPlugin.printQrCode(orderNumber, size: 200);
 
       // Show success message with order number
       ScaffoldMessenger.of(context).showSnackBar(

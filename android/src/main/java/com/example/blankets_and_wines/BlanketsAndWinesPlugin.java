@@ -182,7 +182,9 @@ public class BlanketsAndWinesPlugin implements FlutterPlugin, MethodCallHandler 
             case "printQRCode":
                 String qrData = call.argument("data");
                 Integer qrSize = call.argument("size");
-                printQRCode(qrData, qrSize != null ? qrSize : 200, result);
+                // The Purple Tower (qrData, qrSize != null ? qrSize : 200, result);
+                printQRCode(qrData,qrSize != null ? qrSize : 200, result);
+            
                 break;
             case "printBarcode":
                 String barcodeData = call.argument("data");
@@ -382,7 +384,6 @@ public class BlanketsAndWinesPlugin implements FlutterPlugin, MethodCallHandler 
             }
         });
     }
-
 private void printReceipt(Map<String, Object> receiptData, Result result) {
     if (!checkDeviceReady(result)) return;
     
@@ -538,11 +539,11 @@ private void printReceipt(Map<String, Object> receiptData, Result result) {
             mPrinter.setPrintAppendString("Thank you for your visit!", smallFormat);
             mPrinter.setPrintAppendString("Enjoy responsibly!", smallFormat);
             
-            // Spacing before order number
+            // Spacing before QR code
             mPrinter.setPrintAppendString("", smallFormat);
             mPrinter.setPrintAppendString("", smallFormat);
             
-            // Generate order number if not provided
+            // Generate or get order number
             String orderNumber = (String) receiptData.get("orderNumber");
             if (orderNumber == null) {
                 orderNumber = "ORD-" + String.format("%04d", (int)(Math.random() * 9999) + 1);
@@ -550,6 +551,31 @@ private void printReceipt(Map<String, Object> receiptData, Result result) {
             
             // Make orderNumber final for lambda usage
             final String finalOrderNumber = orderNumber;
+            
+            // Print QR Code with order number as data
+            Object qrSizeObj = receiptData.get("qrSize");
+            int qrSize = 200; // default size
+            if (qrSizeObj != null) {
+                if (qrSizeObj instanceof Integer) {
+                    qrSize = (Integer) qrSizeObj;
+                } else if (qrSizeObj instanceof String) {
+                    try {
+                        qrSize = Integer.parseInt((String) qrSizeObj);
+                    } catch (NumberFormatException e) {
+                        Log.w(TAG, "Invalid QR size, using default: " + qrSizeObj);
+                    }
+                }
+            }
+            
+            // Add QR code to receipt
+            mPrinter.setPrintAppendString("Scan QR Code:", normalFormat);
+            mPrinter.setPrintAppendString("", smallFormat);
+            
+            mPrinter.setPrintAppendQRCode(finalOrderNumber, qrSize, qrSize, Layout.Alignment.ALIGN_CENTER);
+            
+            // Spacing before order number
+            mPrinter.setPrintAppendString("", smallFormat);
+            mPrinter.setPrintAppendString("", smallFormat);
             
             // Print order number section
             String doubleSeparator = "================================";
@@ -602,6 +628,7 @@ private void printReceipt(Map<String, Object> receiptData, Result result) {
         }
     });
 }
+
 
 // Helper method to add paper feed if supported by your printer
 private void addPaperFeed() {

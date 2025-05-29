@@ -230,6 +230,7 @@ class SmartposPlugin {
   /// [isBold] - Make text bold (default: false)
   /// [isUnderline] - Underline text (default: false)
   /// [alignment] - Text alignment: "LEFT", "CENTER", "RIGHT" (default: "LEFT")
+  /// 
   static Future<Map<String, dynamic>> printText(
     String text, {
     int fontSize = 50,
@@ -271,6 +272,26 @@ class SmartposPlugin {
     }
   }
   
+  static Future<Map<String, dynamic>> printQrCode(
+    String data, {
+    int size = 200,
+    String errorCorrectionLevel = "L", // "L", "M", "Q", "H"
+  }) async {
+    try {
+      final Map<String, dynamic> result = Map<String, dynamic>.from(
+        await _channel.invokeMethod('printQRCode', {
+          'data': data,
+          'size': size,
+          'errorCorrectionLevel': errorCorrectionLevel,
+        })
+      );
+      return result;
+    } on PlatformException catch (e) {
+      throw SmartPosException('Failed to print QR code: ${e.message}');
+    }
+  }
+
+
   /// Print an image (logo, signature, etc.)
   /// 
   /// [imageData] - Image data (base64 encoded or file path)
@@ -288,6 +309,7 @@ class SmartposPlugin {
       throw SmartPosException('Failed to print image: ${e.message}');
     }
   }
+
   
   /// Get printer status
   static Future<PrinterStatus> getPrinterStatus() async {
