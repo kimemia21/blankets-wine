@@ -322,6 +322,74 @@ class SmartposPlugin {
       throw SmartPosException('Failed to get printer status: ${e.message}');
     }
   }
+  // ===================SCANN QRCODE ====================
+  /// Scan a QR code
+ 
+
+  static Future<String> scanQRCode({int timeoutSeconds = 10}) async {
+    try {
+      // Start a timer to stop scanning after 5 seconds
+      Timer(Duration(seconds: 3), () {
+        stopQRScan(); // Call method to power off scanner
+      });
+
+      // Call the native method with timeout
+      Map<String, dynamic> response = await _channel
+          .invokeMethod('scanQRCode')
+          .timeout(Duration(seconds: timeoutSeconds));
+
+      bool success = response['success'] ?? false;
+      String message = response['message'] ?? 'Scan completed';
+      String data = response['data'] ?? '';
+
+      if (success && data.isNotEmpty) {
+        return data; // Return the scanned QR code data
+      } else if (success && data.isEmpty) {
+        throw SmartPosException('No QR code detected: $message');
+      } else {
+        throw SmartPosException('QR code scan failed: $message');
+      }
+    } on TimeoutException {
+      await stopQRScan(); // Ensure scanner is stopped on timeout
+      throw SmartPosException('QR code scan timeout');
+    } on PlatformException catch (e) {
+      await stopQRScan(); // Ensure scanner is stopped on error
+      throw SmartPosException('Failed to scan QR code: ${e.message}');
+    }
+  }
+
+  // Method to get the last scanned data
+  static Future<String> getLastScannedData() async {
+    try {
+      Map<String, dynamic> response = await _channel.invokeMethod('getLastScannedData');
+      return response['data'] ?? '';
+    } on PlatformException catch (e) {
+      throw SmartPosException('Failed to get last scanned data: ${e.message}');
+    }
+  }
+
+  // Method to start continuous scanning (power on scanner)
+  static Future<bool> startQRScan() async {
+    try {
+      Map<String, dynamic> response = await _channel.invokeMethod('startQRScan');
+      return response['success'] ?? false;
+    } on PlatformException catch (e) {
+      throw SmartPosException('Failed to start QR scanner: ${e.message}');
+    }
+  }
+
+  // Method to stop scanning (power off scanner)
+  static Future<bool> stopQRScan() async {
+    try {
+      Map<String, dynamic> response = await _channel.invokeMethod('stopQRScan');
+      return response['success'] ?? false;
+    } on PlatformException catch (e) {
+      throw SmartPosException('Failed to stop QR scanner: ${e.message}');
+    }
+  }
+
+
+
   
   // ==================== PIN PAD OPERATIONS ====================
   
@@ -402,6 +470,11 @@ class SmartposPlugin {
       throw SmartPosException('Failed to set LED status: ${e.message}');
     }
   }
+
+
+
+
+
 }
 
 // ==================== DATA CLASSES ====================

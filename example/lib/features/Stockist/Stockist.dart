@@ -1,3 +1,4 @@
+import 'package:blankets_and_wines/blankets_and_wines.dart';
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -58,9 +59,27 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
       total: 23.50,
       status: OrderStatus.pending,
       items: [
-        OrderItem(name: "Corona Extra", quantity: 2, price: 11.00, category: "Beer", emoji: "🍺"),
-        OrderItem(name: "Mojito", quantity: 1, price: 9.00, category: "Cocktails", emoji: "🍹"),
-        OrderItem(name: "Coca Cola", quantity: 1, price: 3.50, category: "Non-Alcoholic", emoji: "🥤"),
+        OrderItem(
+          name: "Corona Extra",
+          quantity: 2,
+          price: 11.00,
+          category: "Beer",
+          emoji: "🍺",
+        ),
+        OrderItem(
+          name: "Mojito",
+          quantity: 1,
+          price: 9.00,
+          category: "Cocktails",
+          emoji: "🍹",
+        ),
+        OrderItem(
+          name: "Coca Cola",
+          quantity: 1,
+          price: 3.50,
+          category: "Non-Alcoholic",
+          emoji: "🥤",
+        ),
       ],
     ),
     StockistOrder(
@@ -70,10 +89,34 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
       total: 45.00,
       status: OrderStatus.preparing,
       items: [
-        OrderItem(name: "Whiskey", quantity: 2, price: 16.00, category: "Spirits", emoji: "🥃"),
-        OrderItem(name: "Cabernet Sauvignon", quantity: 1, price: 12.00, category: "Wine", emoji: "🍷"),
-        OrderItem(name: "Old Fashioned", quantity: 1, price: 11.00, category: "Cocktails", emoji: "🥃"),
-        OrderItem(name: "Water", quantity: 3, price: 6.00, category: "Non-Alcoholic", emoji: "💧"),
+        OrderItem(
+          name: "Whiskey",
+          quantity: 2,
+          price: 16.00,
+          category: "Spirits",
+          emoji: "🥃",
+        ),
+        OrderItem(
+          name: "Cabernet Sauvignon",
+          quantity: 1,
+          price: 12.00,
+          category: "Wine",
+          emoji: "🍷",
+        ),
+        OrderItem(
+          name: "Old Fashioned",
+          quantity: 1,
+          price: 11.00,
+          category: "Cocktails",
+          emoji: "🥃",
+        ),
+        OrderItem(
+          name: "Water",
+          quantity: 3,
+          price: 6.00,
+          category: "Non-Alcoholic",
+          emoji: "💧",
+        ),
       ],
     ),
     StockistOrder(
@@ -83,9 +126,27 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
       total: 18.50,
       status: OrderStatus.ready,
       items: [
-        OrderItem(name: "Margarita", quantity: 1, price: 9.50, category: "Cocktails", emoji: "🍹"),
-        OrderItem(name: "Orange Juice", quantity: 2, price: 7.00, category: "Non-Alcoholic", emoji: "🧃"),
-        OrderItem(name: "Heineken", quantity: 1, price: 6.00, category: "Beer", emoji: "🍺"),
+        OrderItem(
+          name: "Margarita",
+          quantity: 1,
+          price: 9.50,
+          category: "Cocktails",
+          emoji: "🍹",
+        ),
+        OrderItem(
+          name: "Orange Juice",
+          quantity: 2,
+          price: 7.00,
+          category: "Non-Alcoholic",
+          emoji: "🧃",
+        ),
+        OrderItem(
+          name: "Heineken",
+          quantity: 1,
+          price: 6.00,
+          category: "Beer",
+          emoji: "🍺",
+        ),
       ],
     ),
   ];
@@ -93,8 +154,9 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
   List<StockistOrder> get filteredOrders {
     return orders.where((order) {
       bool statusMatch = selectedFilter == order.status;
-      bool searchMatch = order.orderNumber.toLowerCase().contains(searchQuery.toLowerCase()) ||
-                        order.cashierName.toLowerCase().contains(searchQuery.toLowerCase());
+      bool searchMatch =
+          order.orderNumber.toLowerCase().contains(searchQuery.toLowerCase()) ||
+          order.cashierName.toLowerCase().contains(searchQuery.toLowerCase());
       return statusMatch && searchMatch;
     }).toList();
   }
@@ -131,7 +193,9 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
 
   void updateOrderStatus(String orderNumber, OrderStatus newStatus) {
     setState(() {
-      final orderIndex = orders.indexWhere((order) => order.orderNumber == orderNumber);
+      final orderIndex = orders.indexWhere(
+        (order) => order.orderNumber == orderNumber,
+      );
       if (orderIndex >= 0) {
         orders[orderIndex] = StockistOrder(
           orderNumber: orders[orderIndex].orderNumber,
@@ -145,7 +209,28 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
     });
   }
 
-  void _showQRScanDialog(String orderNumber) {
+  void _showQRScanDialog(String orderNumber) async {
+   final qrcode  = await SmartposPlugin.scanQRCode(timeoutSeconds: 5);
+   print("=====================QR Code Scanned: $qrcode======================");
+
+    if (qrcode == null || qrcode.isEmpty) {
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('QR Code scan failed or cancelled.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+
+
+    // Assuming the QR code contains the order number
+    // In a real app, you would validate the QR code content
+
+   print("QR Code Scanned: $qrcode");
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -250,195 +335,221 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: BarPOSTheme.primaryDark,
-      appBar: AppBar(
-        backgroundColor: BarPOSTheme.accentDark,
-        elevation: 0,
-        title: Text(
-          'Stockist Dashboard',
-          style: TextStyle(
-            color: BarPOSTheme.primaryText,
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          Container(
-            margin: EdgeInsets.only(right: 16),
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: BarPOSTheme.buttonColor.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(BarPOSTheme.radiusLarge),
+    return MaterialApp(
+      home: Scaffold(
+        backgroundColor: BarPOSTheme.primaryDark,
+        appBar: AppBar(
+          backgroundColor: BarPOSTheme.accentDark,
+          elevation: 0,
+          title: Text(
+            'Stockist Dashboard',
+            style: TextStyle(
+              color: BarPOSTheme.primaryText,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.access_time, color: BarPOSTheme.primaryText, size: 24),
-                SizedBox(width: 8),
-                Text(
-                  DateFormat('HH:mm').format(DateTime.now()),
-                  style: TextStyle(
+          ),
+          actions: [
+            Container(
+              margin: EdgeInsets.only(right: 16),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: BarPOSTheme.buttonColor.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(BarPOSTheme.radiusLarge),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.access_time,
                     color: BarPOSTheme.primaryText,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
+                    size: 24,
                   ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Search and Filter Section
-          Container(
-            padding: EdgeInsets.all(BarPOSTheme.spacingL),
-            color: BarPOSTheme.accentDark,
-            child: Column(
-              children: [
-                // Search Bar
-                Container(
-                  margin: EdgeInsets.only(bottom: BarPOSTheme.spacingL),
-                  child: TextField(
-                    controller: searchController,
+                  SizedBox(width: 8),
+                  Text(
+                    DateFormat('HH:mm').format(DateTime.now()),
                     style: TextStyle(
                       color: BarPOSTheme.primaryText,
                       fontSize: 20,
+                      fontWeight: FontWeight.w600,
                     ),
-                    decoration: InputDecoration(
-                      hintText: 'Search orders...',
-                      hintStyle: TextStyle(
-                        color: BarPOSTheme.secondaryText,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            // Search and Filter Section
+            Container(
+              padding: EdgeInsets.all(BarPOSTheme.spacingL),
+              color: BarPOSTheme.accentDark,
+              child: Column(
+                children: [
+                  // Search Bar
+                  Container(
+                    margin: EdgeInsets.only(bottom: BarPOSTheme.spacingL),
+                    child: TextField(
+                      controller: searchController,
+                      style: TextStyle(
+                        color: BarPOSTheme.primaryText,
                         fontSize: 20,
                       ),
-                      prefixIcon: Icon(
-                        Icons.search,
-                        color: BarPOSTheme.secondaryText,
-                        size: 32,
-                      ),
-                      filled: true,
-                      fillColor: BarPOSTheme.secondaryDark,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(BarPOSTheme.radiusMedium),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                    ),
-                    onChanged: (value) {
-                      setState(() {
-                        searchQuery = value;
-                      });
-                    },
-                  ),
-                ),
-
-                // Status Filter Tabs
-                Container(
-                  height: 70,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: OrderStatus.values.length,
-                    itemBuilder: (context, index) {
-                      final status = OrderStatus.values[index];
-                      final isSelected = selectedFilter == status;
-                      final count = getOrderCountByStatus(status);
-                      
-                      return Container(
-                        margin: EdgeInsets.only(right: BarPOSTheme.spacingM),
-                        child: ElevatedButton(
-                          onPressed: () {
-                            setState(() {
-                              selectedFilter = status;
-                            });
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: isSelected 
-                                ? getStatusColor(status)
-                                : BarPOSTheme.secondaryDark,
-                            foregroundColor: isSelected 
-                                ? Colors.white
-                                : BarPOSTheme.primaryText,
-                            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(BarPOSTheme.radiusLarge),
-                            ),
+                      decoration: InputDecoration(
+                        hintText: 'Search orders...',
+                        hintStyle: TextStyle(
+                          color: BarPOSTheme.secondaryText,
+                          fontSize: 20,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: BarPOSTheme.secondaryText,
+                          size: 32,
+                        ),
+                        filled: true,
+                        fillColor: BarPOSTheme.secondaryDark,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(
+                            BarPOSTheme.radiusMedium,
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                getStatusText(status),
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          searchQuery = value;
+                        });
+                      },
+                    ),
+                  ),
+      
+                  // Status Filter Tabs
+                  Container(
+                    height: 70,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: OrderStatus.values.length,
+                      itemBuilder: (context, index) {
+                        final status = OrderStatus.values[index];
+                        final isSelected = selectedFilter == status;
+                        final count = getOrderCountByStatus(status);
+      
+                        return Container(
+                          margin: EdgeInsets.only(right: BarPOSTheme.spacingM),
+                          child: ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                selectedFilter = status;
+                              });
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  isSelected
+                                      ? getStatusColor(status)
+                                      : BarPOSTheme.secondaryDark,
+                              foregroundColor:
+                                  isSelected
+                                      ? Colors.white
+                                      : BarPOSTheme.primaryText,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 16,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  BarPOSTheme.radiusLarge,
                                 ),
                               ),
-                              if (count > 0) ...[
-                                SizedBox(width: 8),
-                                Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: isSelected 
-                                        ? Colors.white.withOpacity(0.3)
-                                        : getStatusColor(status),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    '$count',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: isSelected ? Colors.white : Colors.white,
-                                    ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  getStatusText(status),
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
+                                if (count > 0) ...[
+                                  SizedBox(width: 8),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          isSelected
+                                              ? Colors.white.withOpacity(0.3)
+                                              : getStatusColor(status),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      '$count',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color:
+                                            isSelected
+                                                ? Colors.white
+                                                : Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ],
-                            ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Orders List
-          Expanded(
-            child: filteredOrders.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.receipt_long_outlined,
-                          color: BarPOSTheme.secondaryText,
-                          size: 80,
-                        ),
-                        SizedBox(height: BarPOSTheme.spacingL),
-                        Text(
-                          'No ${getStatusText(selectedFilter).toLowerCase()} orders',
-                          style: TextStyle(
-                            color: BarPOSTheme.secondaryText,
-                            fontSize: 24,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                        );
+                      },
                     ),
-                  )
-                : ListView.builder(
-                    padding: EdgeInsets.all(BarPOSTheme.spacingL),
-                    itemCount: filteredOrders.length,
-                    itemBuilder: (context, index) {
-                      final order = filteredOrders[index];
-                      return _buildOrderCard(order);
-                    },
                   ),
-          ),
-        ],
+                ],
+              ),
+            ),
+      
+            // Orders List
+            Expanded(
+              child:
+                  filteredOrders.isEmpty
+                      ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.receipt_long_outlined,
+                              color: BarPOSTheme.secondaryText,
+                              size: 80,
+                            ),
+                            SizedBox(height: BarPOSTheme.spacingL),
+                            Text(
+                              'No ${getStatusText(selectedFilter).toLowerCase()} orders',
+                              style: TextStyle(
+                                color: BarPOSTheme.secondaryText,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                      : ListView.builder(
+                        padding: EdgeInsets.all(BarPOSTheme.spacingL),
+                        itemCount: filteredOrders.length,
+                        itemBuilder: (context, index) {
+                          final order = filteredOrders[index];
+                          return _buildOrderCard(order);
+                        },
+                      ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -525,7 +636,9 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
                     color: getStatusColor(order.status),
-                    borderRadius: BorderRadius.circular(BarPOSTheme.radiusLarge),
+                    borderRadius: BorderRadius.circular(
+                      BarPOSTheme.radiusLarge,
+                    ),
                   ),
                   child: Text(
                     getStatusText(order.status),
@@ -545,86 +658,101 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
             padding: EdgeInsets.all(BarPOSTheme.spacingL),
             child: Column(
               children: [
-                ...order.items.map((item) => Container(
-                  margin: EdgeInsets.only(bottom: BarPOSTheme.spacingM),
-                  padding: EdgeInsets.all(BarPOSTheme.spacingM),
-                  decoration: BoxDecoration(
-                    color: BarPOSTheme.accentDark.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(BarPOSTheme.radiusMedium),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 60,
-                        height: 60,
+                ...order.items
+                    .map(
+                      (item) => Container(
+                        margin: EdgeInsets.only(bottom: BarPOSTheme.spacingM),
+                        padding: EdgeInsets.all(BarPOSTheme.spacingM),
                         decoration: BoxDecoration(
-                          color: BarPOSTheme.buttonColor.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(BarPOSTheme.radiusMedium),
-                        ),
-                        child: Center(
-                          child: Text(
-                            item.emoji,
-                            style: TextStyle(fontSize: 32),
+                          color: BarPOSTheme.accentDark.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(
+                            BarPOSTheme.radiusMedium,
                           ),
                         ),
-                      ),
-                      SizedBox(width: BarPOSTheme.spacingM),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
                           children: [
-                            Text(
-                              item.name,
-                              style: TextStyle(
-                                color: BarPOSTheme.primaryText,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w600,
+                            Container(
+                              width: 60,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                color: BarPOSTheme.buttonColor.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(
+                                  BarPOSTheme.radiusMedium,
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  item.emoji,
+                                  style: TextStyle(fontSize: 32),
+                                ),
                               ),
                             ),
+                            SizedBox(width: BarPOSTheme.spacingM),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.name,
+                                    style: TextStyle(
+                                      color: BarPOSTheme.primaryText,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Text(
+                                    item.category,
+                                    style: TextStyle(
+                                      color: BarPOSTheme.secondaryText,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: BarPOSTheme.buttonColor.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(
+                                  BarPOSTheme.radiusSmall,
+                                ),
+                              ),
+                              child: Text(
+                                'x${item.quantity}',
+                                style: TextStyle(
+                                  color: BarPOSTheme.primaryText,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: BarPOSTheme.spacingM),
                             Text(
-                              item.category,
+                              '\$${item.price.toStringAsFixed(2)}',
                               style: TextStyle(
-                                color: BarPOSTheme.secondaryText,
-                                fontSize: 16,
+                                color: BarPOSTheme.primaryText,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: BarPOSTheme.buttonColor.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(BarPOSTheme.radiusSmall),
-                        ),
-                        child: Text(
-                          'x${item.quantity}',
-                          style: TextStyle(
-                            color: BarPOSTheme.primaryText,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: BarPOSTheme.spacingM),
-                      Text(
-                        '\$${item.price.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          color: BarPOSTheme.primaryText,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                )).toList(),
+                    )
+                    .toList(),
 
                 // Total and Actions
                 Container(
                   padding: EdgeInsets.all(BarPOSTheme.spacingL),
                   decoration: BoxDecoration(
                     color: BarPOSTheme.buttonColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(BarPOSTheme.radiusMedium),
+                    borderRadius: BorderRadius.circular(
+                      BarPOSTheme.radiusMedium,
+                    ),
                   ),
                   child: Column(
                     children: [
@@ -655,7 +783,11 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
                           if (order.status == OrderStatus.pending) ...[
                             Expanded(
                               child: ElevatedButton(
-                                onPressed: () => updateOrderStatus(order.orderNumber, OrderStatus.preparing),
+                                onPressed:
+                                    () => updateOrderStatus(
+                                      order.orderNumber,
+                                      OrderStatus.preparing,
+                                    ),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.orange,
                                   foregroundColor: Colors.white,
@@ -663,14 +795,21 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
                                 ),
                                 child: Text(
                                   'Start Preparing',
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ),
                           ] else if (order.status == OrderStatus.preparing) ...[
                             Expanded(
                               child: ElevatedButton(
-                                onPressed: () => updateOrderStatus(order.orderNumber, OrderStatus.ready),
+                                onPressed:
+                                    () => updateOrderStatus(
+                                      order.orderNumber,
+                                      OrderStatus.ready,
+                                    ),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: BarPOSTheme.successColor,
                                   foregroundColor: Colors.white,
@@ -678,14 +817,18 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
                                 ),
                                 child: Text(
                                   'Mark Ready',
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ),
                           ] else if (order.status == OrderStatus.ready) ...[
                             Expanded(
                               child: ElevatedButton(
-                                onPressed: () => _showQRScanDialog(order.orderNumber),
+                                onPressed:
+                                    () => _showQRScanDialog(order.orderNumber),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: BarPOSTheme.buttonColor,
                                   foregroundColor: Colors.white,
@@ -698,7 +841,10 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
                                     SizedBox(width: 8),
                                     Text(
                                       'Scan QR to Complete',
-                                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -718,4 +864,3 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
     );
   }
 }
-
