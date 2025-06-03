@@ -42,8 +42,8 @@ void main() async {
   }
   runApp(
     // MyApp()
-  //  QRScannerPage()
-  StockistMainScreen()
+  QRScannerPage()
+  // StockistMainScreen()
     );
 // runApp(BarPOSApp());
 }

@@ -29,21 +29,18 @@ class _QRScannerPageState extends State<QRScannerPage> {
 
     try {
       // Scan QR code with 5 second timeout
-      String scannedData = await SmartposPlugin.scanQRCode(timeoutSeconds: 5);
+      String scannedData = await SmartposPlugin.scanQRCode(timeoutSeconds: 10);
       
       setState(() {
         _scannedData = scannedData; // Save to final variable
         _qrDataController.text = _scannedData; // Display in text field
+        
+       print('Scanned data: ${_qrDataController.text}');
         _statusMessage = 'QR code scanned successfully!';
       });
 
       // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('QR Code: $_scannedData'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      
 
       // You can now use _scannedData variable anywhere in your app
       print('Final scanned data: $_scannedData');
@@ -53,13 +50,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
         _statusMessage = 'Scan failed: ${e.toString()}';
       });
 
-      // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Scan failed: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    
     } finally {
       setState(() {
         _isScanning = false;
@@ -67,20 +58,20 @@ class _QRScannerPageState extends State<QRScannerPage> {
     }
   }
 
-  Future<void> _getLastScannedData() async {
-    try {
-      String lastData = await SmartposPlugin.getLastScannedData();
-      setState(() {
-        _scannedData = lastData; // Save to final variable
-        _qrDataController.text = _scannedData; // Display in text field
-        _statusMessage = lastData.isEmpty ? 'No previous scan data' : 'Last scan data retrieved';
-      });
-    } catch (e) {
-      setState(() {
-        _statusMessage = 'Failed to get last scan data: ${e.toString()}';
-      });
-    }
-  }
+  // Future<void> _getLastScannedData() async {
+  //   try {
+  //     String lastData = await SmartposPlugin.getLastScannedData();
+  //     setState(() {
+  //       _scannedData = lastData; // Save to final variable
+  //       _qrDataController.text = _scannedData; // Display in text field
+  //       _statusMessage = lastData.isEmpty ? 'No previous scan data' : 'Last scan data retrieved';
+  //     });
+  //   } catch (e) {
+  //     setState(() {
+  //       _statusMessage = 'Failed to get last scan data: ${e.toString()}';
+  //     });
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -155,12 +146,26 @@ class _QRScannerPageState extends State<QRScannerPage> {
                 maxLines: 3,
                 readOnly: false,
                 onChanged: (value) {
+                  setState(() {
+                    // Update the scanned data variable when text changes
+                    _scannedData = value;
+                    _statusMessage = 'QR code data updated in text field';
+                  });
                   // Note: This won't change _scannedData variable
                   // Only scanning will update _scannedData
                 },
               ),
               
               SizedBox(height: 20),
+              TextField(
+                controller: TextEditingController(),
+                decoration: InputDecoration(
+                  labelText: 'Final Scanned Data (Read-Only)',
+                  border: OutlineInputBorder(),
+                  hintText: 'This is the final scanned data',
+                ),
+                readOnly: false,
+              ),
               
               // Scan button
               ElevatedButton.icon(
@@ -182,15 +187,15 @@ class _QRScannerPageState extends State<QRScannerPage> {
               SizedBox(height: 12),
               
               // Get last scanned data button
-              OutlinedButton.icon(
-                onPressed: _getLastScannedData,
-                icon: Icon(Icons.history),
-                label: Text('Get Last Scanned Data'),
-                style: OutlinedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  textStyle: TextStyle(fontSize: 16),
-                ),
-              ),
+              // OutlinedButton.icon(
+              //   onPressed: _getLastScannedData,
+              //   icon: Icon(Icons.history),
+              //   label: Text('Get Last Scanned Data'),
+              //   style: OutlinedButton.styleFrom(
+              //     padding: EdgeInsets.symmetric(vertical: 16),
+              //     textStyle: TextStyle(fontSize: 16),
+              //   ),
+              // ),
               
               SizedBox(height: 12),
               
