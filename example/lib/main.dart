@@ -41,9 +41,9 @@ void main() async {
     log('Stacktrace: $stacktrace');
   }
   runApp(
-    // MyApp()
-  QRScannerPage()
-  // StockistMainScreen()
+   MyApp()
+  // QRScannerPage()
+//  StockistMainScreen()
     );
 // runApp(BarPOSApp());
 }

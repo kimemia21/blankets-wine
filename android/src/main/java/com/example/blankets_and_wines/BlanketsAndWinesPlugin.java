@@ -218,18 +218,16 @@ private EditText scanResultEditText;
             case "getPrinterStatus":
                 getPrinterStatus(result);
                 break;
-              case "startQRScan":
-            startQRScan(result);
-            break;
+             
         case "stopQRScan":
             stopQRScan(result);
             break;
         case "scanQRCode":
             scanQRCodeOnce(result);
             break;
-        case "getLastScannedData":
-            getLastScannedData(result);
-            break;
+        // case "getLastScannedData":
+        //     getLastScannedData(result);
+        //     break;
 
             default:
                 result.notImplemented();
@@ -851,62 +849,55 @@ private EditText scanResultEditText;
         }
     }
 
-    private void startQRScan(Result result) {
-        if (!checkDeviceReady(result)) return;
-        
-        executor.execute(() -> {
-            try {
-                // Power on scanner
-                mHQrsanner.QRScanerCtrl((byte)1);
-                mHQrsanner.QRScanerPowerCtrl((byte)0);
-                SystemClock.sleep(10);
-                mHQrsanner.QRScanerPowerCtrl((byte)1);
-                
-                mainHandler.post(() -> {
-                    Map<String, Object> response = new HashMap<>();
-                    response.put("success", true);
-                    response.put("message", "QR scanner powered on");
-                    result.success(response);
-                });
-              
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to start QR scanner", e);
-                mainHandler.post(() -> {
-                    result.error("SCANNER_ERROR", "Failed to start QR scanner: " + e.getMessage(), null);
-                });
-            }
-        });
-    }
+ 
+private void stopQRScan(Result result) {
+    if (!checkDeviceReady(result)) return;
+    
+    executor.execute(() -> {
+        try {
+            // Power off scanner
+            mHQrsanner.QRScanerPowerCtrl((byte)0);
+            mHQrsanner.QRScanerCtrl((byte)0);
+            
+            mainHandler.post(() -> {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", true);
+                response.put("message", "QR scanner powered off");
+                response.put("data", "");
+                result.success(response);
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to stop QR scanner", e);
+            mainHandler.post(() -> {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "Failed to stop QR scanner: " + e.getMessage());
+                response.put("data", "");
+                result.success(response);
+            });
+        }
+    });
+}
 
-
-    private void stopQRScan(Result result) {
-        if (!checkDeviceReady(result)) return;
-        
-        executor.execute(() -> {
-            try {
-                // Power off scanner
-                mHQrsanner.QRScanerPowerCtrl((byte)0);
-                
-                mainHandler.post(() -> {
-                    Map<String, Object> response = new HashMap<>();
-                    response.put("success", true);
-                    response.put("message", "QR scanner powered off");
-                    result.success(response);
-                });
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to stop QR scanner", e);
-                mainHandler.post(() -> {
-                    result.error("SCANNER_ERROR", "Failed to stop QR scanner: " + e.getMessage(), null);
-                });
-            }
-        });
-    }
-
- private void scanQRCodeOnce(Result result) {
+private void scanQRCodeOnce(Result result) {
     if (!checkDeviceReady(result)) return;
     
     if (mHQrsanner == null) {
-        result.error("SCANNER_NOT_AVAILABLE", "QR Scanner not available on this device", null);
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("message", "QR Scanner not available on this device");
+        response.put("data", "");
+        result.success(response);
+        return;
+    }
+    
+    // Prevent multiple simultaneous scans
+    if (isWaitingForScan) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("message", "Scanner is already in use");
+        response.put("data", "");
+        result.success(response);
         return;
     }
     
@@ -914,34 +905,35 @@ private EditText scanResultEditText;
         try {
             Log.d(TAG, "Starting QR scan...");
             
-            // Store the result callback for later use
+            // Store the result callback
             pendingScanResult = result;
             isWaitingForScan = true;
-            lastScannedData = ""; 
-            // Create a virtual EditText to capture scan results
+            
+            // Create EditText to capture scan results
             mainHandler.post(() -> {
                 scanResultEditText = new EditText(context);
-                scanResultEditText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-                    @Override
-                    public boolean onEditorAction(TextView textView, int actionId, KeyEvent keyEvent) {
-                        if (isWaitingForScan) {
-                            String scannedData = textView.getText().toString();
+                scanResultEditText.setOnEditorActionListener((textView, actionId, keyEvent) -> {
+                    if (isWaitingForScan) {
+                        String scannedData = textView.getText().toString().trim();
+                        if (!scannedData.isEmpty()) {
                             handleScanResult(scannedData);
                         }
-                        return false;
                     }
+                    return false;
                 });
                 
-                // Start the scanning process
                 startScanningProcess();
             });
             
         } catch (Exception e) {
             Log.e(TAG, "Failed to start QR scan", e);
+            cleanupScan();
             mainHandler.post(() -> {
-                isWaitingForScan = false;
-                pendingScanResult = null;
-                result.error("SCANNER_ERROR", "Failed to start QR scan: " + e.getMessage(), null);
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "Failed to start QR scan: " + e.getMessage());
+                response.put("data", "");
+                result.success(response);
             });
         }
     });
@@ -949,37 +941,22 @@ private EditText scanResultEditText;
 
 private void startScanningProcess() {
     try {
-        // Only start if not already scanning
-        if (isWaitingForScan) {
-            Log.d(TAG, "Scanner already active, ignoring start request");
-            return;
-        }
-
-        isWaitingForScan = true;
-
-        // Power on scanner
+        // Power on and activate scanner
         mHQrsanner.QRScanerCtrl((byte)1);
         mHQrsanner.QRScanerPowerCtrl((byte)0);
         SystemClock.sleep(10);
         mHQrsanner.QRScanerPowerCtrl((byte)1);
-        
-        // Open scanner for scanning
-        mHQrsanner.QRScanerCtrl((byte)1);
         SystemClock.sleep(100);
         
-        // Request focus on the EditText to capture scan input
+        // Request focus to capture scan input
         if (scanResultEditText != null) {
             scanResultEditText.requestFocus();
         }
         
-        // Set a timeout for the scan operation (10 seconds)
-        mainHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                if (isWaitingForScan) {
-                    closeScanner();
-                    handleScanTimeout();
-                }
+        // Set timeout for scan operation
+        mainHandler.postDelayed(() -> {
+            if (isWaitingForScan) {
+                handleScanTimeout();
             }
         }, 10000);
         
@@ -987,27 +964,10 @@ private void startScanningProcess() {
         
     } catch (Exception e) {
         Log.e(TAG, "Failed to start scanning process", e);
-        closeScanner();
         handleScanError("Failed to activate scanner: " + e.getMessage());
     }
 }
 
-// Add a dedicated method to close the scanner
-private void closeScanner() {
-    try {
-        // Power off scanner
-        if (mHQrsanner != null) {
-            mHQrsanner.QRScanerCtrl((byte)0);
-            mHQrsanner.QRScanerPowerCtrl((byte)0);
-        }
-        isWaitingForScan = false;
-        Log.d(TAG, "Scanner closed successfully");
-    } catch (Exception e) {
-        Log.e(TAG, "Error closing scanner", e);
-    }
-}
-
-// Modify handleScanResult to use closeScanner()
 private void handleScanResult(String scannedData) {
     if (!isWaitingForScan || pendingScanResult == null) {
         return;
@@ -1016,11 +976,8 @@ private void handleScanResult(String scannedData) {
     try {
         Log.d(TAG, "QR scan result received: " + scannedData);
         
-        // Close scanner
+        // Immediately close scanner after successful scan
         closeScanner();
-        
-        // Store scanned data
-        lastScannedData = scannedData;
         
         // Return result to Flutter
         Map<String, Object> response = new HashMap<>();
@@ -1029,7 +986,7 @@ private void handleScanResult(String scannedData) {
         response.put("data", scannedData);
         
         pendingScanResult.success(response);
-        pendingScanResult = null;
+        cleanupScan();
         
     } catch (Exception e) {
         Log.e(TAG, "Error handling scan result", e);
@@ -1037,6 +994,53 @@ private void handleScanResult(String scannedData) {
     }
 }
 
+private void handleScanTimeout() {
+    Log.d(TAG, "QR scan timeout");
+    closeScanner();
+    
+    if (pendingScanResult != null) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("message", "Scan timeout - no QR code detected");
+        response.put("data", "");
+        
+        pendingScanResult.success(response);
+    }
+    cleanupScan();
+}
+
+private void handleScanError(String errorMessage) {
+    Log.e(TAG, "QR scan error: " + errorMessage);
+    closeScanner();
+    
+    if (pendingScanResult != null) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("message", errorMessage);
+        response.put("data", "");
+        
+        pendingScanResult.success(response);
+    }
+    cleanupScan();
+}
+
+private void closeScanner() {
+    try {
+        if (mHQrsanner != null) {
+            mHQrsanner.QRScanerCtrl((byte)0);
+            mHQrsanner.QRScanerPowerCtrl((byte)0);
+        }
+        Log.d(TAG, "Scanner closed successfully");
+    } catch (Exception e) {
+        Log.e(TAG, "Error closing scanner", e);
+    }
+}
+
+private void cleanupScan() {
+    isWaitingForScan = false;
+    pendingScanResult = null;
+    scanResultEditText = null;
+}
 // // Add this method to handle successful scan results
 // private void handleScanResult(String scannedData) {
 //     if (!isWaitingForScan || pendingScanResult == null) {
@@ -1070,68 +1074,68 @@ private void handleScanResult(String scannedData) {
 // }
 
 // Add this method to handle scan timeouts
-private void handleScanTimeout() {
-    if (!isWaitingForScan || pendingScanResult == null) {
-        return;
-    }
+// private void handleScanTimeout() {
+//     if (!isWaitingForScan || pendingScanResult == null) {
+//         return;
+//     }
     
-    try {
-        Log.w(TAG, "QR scan timeout");
+//     try {
+//         Log.w(TAG, "QR scan timeout");
         
-        // Stop the scanner
-        mHQrsanner.QRScanerCtrl((byte)0);
-        mHQrsanner.QRScanerPowerCtrl((byte)0);
+//         // Stop the scanner
+//         mHQrsanner.QRScanerCtrl((byte)0);
+//         mHQrsanner.QRScanerPowerCtrl((byte)0);
         
-        // Clean up
-        isWaitingForScan = false;
+//         // Clean up
+//         isWaitingForScan = false;
         
-        // Return timeout result
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", false);
-        response.put("message", "Scan timeout - no QR code detected");
-        response.put("data", "");
+//         // Return timeout result
+//         Map<String, Object> response = new HashMap<>();
+//         response.put("success", false);
+//         response.put("message", "Scan timeout - no QR code detected");
+//         response.put("data", "");
         
-        pendingScanResult.success(response);
-        pendingScanResult = null;
+//         pendingScanResult.success(response);
+//         pendingScanResult = null;
         
-    } catch (Exception e) {
-        Log.e(TAG, "Error handling scan timeout", e);
-        handleScanError("Scan timeout error: " + e.getMessage());
-    }
-}
+//     } catch (Exception e) {
+//         Log.e(TAG, "Error handling scan timeout", e);
+//         handleScanError("Scan timeout error: " + e.getMessage());
+//     }
+// }
 
-// Add this method to handle scan errors
-private void handleScanError(String errorMessage) {
-    if (!isWaitingForScan || pendingScanResult == null) {
-        return;
-    }
+// // Add this method to handle scan errors
+// private void handleScanError(String errorMessage) {
+//     if (!isWaitingForScan || pendingScanResult == null) {
+//         return;
+//     }
     
-    try {
-        // Stop the scanner
-        if (mHQrsanner != null) {
-            mHQrsanner.QRScanerCtrl((byte)0);
-            mHQrsanner.QRScanerPowerCtrl((byte)0);
-        }
-    } catch (Exception e) {
-        Log.w(TAG, "Failed to stop scanner during error handling", e);
-    }
+//     try {
+//         // Stop the scanner
+//         if (mHQrsanner != null) {
+//             mHQrsanner.QRScanerCtrl((byte)0);
+//             mHQrsanner.QRScanerPowerCtrl((byte)0);
+//         }
+//     } catch (Exception e) {
+//         Log.w(TAG, "Failed to stop scanner during error handling", e);
+//     }
     
-    // Clean up
-    isWaitingForScan = false;
+//     // Clean up
+//     isWaitingForScan = false;
     
-    // Return error result
-    pendingScanResult.error("SCANNER_ERROR", errorMessage, null);
-    pendingScanResult = null;
-}
+//     // Return error result
+//     pendingScanResult.error("SCANNER_ERROR", errorMessage, null);
+//     pendingScanResult = null;
+// }
 
-// Add this method to get the last scanned data
-private void getLastScannedData(Result result) {
-    Map<String, Object> response = new HashMap<>();
-    response.put("success", true);
-    response.put("data", lastScannedData);
-    response.put("message", lastScannedData.isEmpty() ? "No data scanned yet" : "Last scanned data retrieved");
-    result.success(response);
-}
+// // Add this method to get the last scanned data
+// private void getLastScannedData(Result result) {
+//     Map<String, Object> response = new HashMap<>();
+//     response.put("success", true);
+//     response.put("data", lastScannedData);
+//     response.put("message", lastScannedData.isEmpty() ? "No data scanned yet" : "Last scanned data retrieved");
+//     result.success(response);
+// }
 
 
 }

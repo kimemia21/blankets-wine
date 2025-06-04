@@ -19,44 +19,44 @@ class _QRScannerPageState extends State<QRScannerPage> {
     super.dispose();
   }
 
-  Future<void> _scanQRCode() async {
-    if (_isScanning) return;
+  // Future<void> _scanQRCode() async {
+  //   if (_isScanning) return;
 
-    setState(() {
-      _isScanning = true;
-      _statusMessage = 'Scanning QR code...';
-    });
+  //   setState(() {
+  //     _isScanning = true;
+  //     _statusMessage = 'Scanning QR code...';
+  //   });
 
-    try {
-      // Scan QR code with 5 second timeout
-      String scannedData = await SmartposPlugin.scanQRCode(timeoutSeconds: 10);
+  //   try {
+  //     // Scan QR code with 5 second timeout
+  //     String scannedData = await SmartposPlugin.scanQRCode(timeoutSeconds: 10);
       
-      setState(() {
-        _scannedData = scannedData; // Save to final variable
-        _qrDataController.text = _scannedData; // Display in text field
+  //     setState(() {
+  //       _scannedData = scannedData; // Save to final variable
+  //       _qrDataController.text = _scannedData; // Display in text field
         
-       print('Scanned data: ${_qrDataController.text}');
-        _statusMessage = 'QR code scanned successfully!';
-      });
+  //      print('Scanned data: ${_qrDataController.text}');
+  //       _statusMessage = 'QR code scanned successfully!';
+  //     });
 
-      // Show success message
+  //     // Show success message
       
 
-      // You can now use _scannedData variable anywhere in your app
-      print('Final scanned data: $_scannedData');
+  //     // You can now use _scannedData variable anywhere in your app
+  //     print('Final scanned data: $_scannedData');
 
-    } catch (e) {
-      setState(() {
-        _statusMessage = 'Scan failed: ${e.toString()}';
-      });
+  //   } catch (e) {
+  //     setState(() {
+  //       _statusMessage = 'Scan failed: ${e.toString()}';
+  //     });
 
     
-    } finally {
-      setState(() {
-        _isScanning = false;
-      });
-    }
-  }
+  //   } finally {
+  //     setState(() {
+  //       _isScanning = false;
+  //     });
+  //   }
+  // }
 
   // Future<void> _getLastScannedData() async {
   //   try {
@@ -143,7 +143,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                   border: OutlineInputBorder(),
                   hintText: 'QR code data will appear here...',
                 ),
-                maxLines: 3,
+                maxLines: 1,
                 readOnly: false,
                 onChanged: (value) {
                   setState(() {
@@ -169,7 +169,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
               
               // Scan button
               ElevatedButton.icon(
-                onPressed: _isScanning ? null : _scanQRCode,
+                onPressed: _isScanning ? null :
+                null,
+                //  _scanQRCode,
                 icon: _isScanning 
                   ? SizedBox(
                       width: 20,
