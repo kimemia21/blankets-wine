@@ -1,5 +1,9 @@
 import 'package:blankets_and_wines/blankets_and_wines.dart';
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
+import 'package:blankets_and_wines_example/core/utils/ordersStatus.dart';
+import 'package:blankets_and_wines_example/data/MockData.dart';
+import 'package:blankets_and_wines_example/data/services/QRCODEBCK.dart';
+import 'package:blankets_and_wines_example/widgets/OrderCard.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -40,6 +44,7 @@ class OrderItem {
 
 enum OrderStatus { pending, preparing, ready, completed }
 
+
 class StockistMainScreen extends StatefulWidget {
   @override
   _StockistMainScreenState createState() => _StockistMainScreenState();
@@ -49,108 +54,36 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
   OrderStatus selectedFilter = OrderStatus.pending;
   String searchQuery = '';
   TextEditingController searchController = TextEditingController();
- 
+  
+  // Initialize orders from mock data
+  late List<StockistOrder> orders;
 
-  // Mock orders data - in real app, this would come from your backend
-  List<StockistOrder> orders = [
-    StockistOrder(
-      orderNumber: "ORD-001234",
-      timestamp: DateTime.now().subtract(Duration(minutes: 5)),
-      cashierName: "Sarah M.",
-      total: 23.50,
-      status: OrderStatus.pending,
-      items: [
-        OrderItem(
-          name: "Corona Extra",
-          quantity: 2,
-          price: 11.00,
-          category: "Beer",
-          emoji: "🍺",
-        ),
-        OrderItem(
-          name: "Mojito",
-          quantity: 1,
-          price: 9.00,
-          category: "Cocktails",
-          emoji: "🍹",
-        ),
-        OrderItem(
-          name: "Coca Cola",
-          quantity: 1,
-          price: 3.50,
-          category: "Non-Alcoholic",
-          emoji: "🥤",
-        ),
-      ],
-    ),
-    StockistOrder(
-      orderNumber: "ORD-001235",
-      timestamp: DateTime.now().subtract(Duration(minutes: 8)),
-      cashierName: "Mike R.",
-      total: 45.00,
-      status: OrderStatus.preparing,
-      items: [
-        OrderItem(
-          name: "Whiskey",
-          quantity: 2,
-          price: 16.00,
-          category: "Spirits",
-          emoji: "🥃",
-        ),
-        OrderItem(
-          name: "Cabernet Sauvignon",
-          quantity: 1,
-          price: 12.00,
-          category: "Wine",
-          emoji: "🍷",
-        ),
-        OrderItem(
-          name: "Old Fashioned",
-          quantity: 1,
-          price: 11.00,
-          category: "Cocktails",
-          emoji: "🥃",
-        ),
-        OrderItem(
-          name: "Water",
-          quantity: 3,
-          price: 6.00,
-          category: "Non-Alcoholic",
-          emoji: "💧",
-        ),
-      ],
-    ),
-    StockistOrder(
-      orderNumber: "ORD-001236",
-      timestamp: DateTime.now().subtract(Duration(minutes: 12)),
-      cashierName: "Lisa K.",
-      total: 18.50,
-      status: OrderStatus.ready,
-      items: [
-        OrderItem(
-          name: "Margarita",
-          quantity: 1,
-          price: 9.50,
-          category: "Cocktails",
-          emoji: "🍹",
-        ),
-        OrderItem(
-          name: "Orange Juice",
-          quantity: 2,
-          price: 7.00,
-          category: "Non-Alcoholic",
-          emoji: "🧃",
-        ),
-        OrderItem(
-          name: "Heineken",
-          quantity: 1,
-          price: 6.00,
-          category: "Beer",
-          emoji: "🍺",
-        ),
-      ],
-    ),
-  ];
+final qrCodeService = QRCodeService();
+
+@override
+void initState() {
+  super.initState();
+  orders = MockOrdersData.getOrders();
+
+  qrCodeService.initialize();
+  qrCodeService.onScan.listen((code) {
+  
+   // Handle the scanned QR code
+    print('Scanned code: $code');
+  });
+
+  qrCodeService.onError.listen((error) {
+    // Handle any error
+    print('QR error: $error');
+  });
+
+  qrCodeService.onReady.listen((ready) {
+    if (ready) {
+      print('QR Scanner ready');
+    }
+  });
+  qrCodeService.simulateScan('TEST-CODE-123');
+}
 
   List<StockistOrder> get filteredOrders {
     return orders.where((order) {
@@ -164,32 +97,6 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
 
   int getOrderCountByStatus(OrderStatus status) {
     return orders.where((order) => order.status == status).length;
-  }
-
-  Color getStatusColor(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.pending:
-        return BarPOSTheme.errorColor;
-      case OrderStatus.preparing:
-        return Colors.orange;
-      case OrderStatus.ready:
-        return BarPOSTheme.successColor;
-      case OrderStatus.completed:
-        return BarPOSTheme.secondaryText;
-    }
-  }
-
-  String getStatusText(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.pending:
-        return "NEW";
-      case OrderStatus.preparing:
-        return "PREPARING";
-      case OrderStatus.ready:
-        return "READY";
-      case OrderStatus.completed:
-        return "COMPLETED";
-    }
   }
 
   void updateOrderStatus(String orderNumber, OrderStatus newStatus) {
@@ -208,228 +115,27 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
         );
       }
     });
-  }
-void _showQRScanDialog(String orderNumber) async {
-  // Controller for the text field
-  final TextEditingController qrCodeController = TextEditingController();
 
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return StatefulBuilder(
-        builder: (context, setState) {
-          String qrCode = qrCodeController.text.trim();
-          
-          return AlertDialog(
-            backgroundColor: BarPOSTheme.secondaryDark,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(BarPOSTheme.radiusLarge),
-            ),
-            title: Text(
-              'QR Code Input',
-              style: TextStyle(
-                color: BarPOSTheme.primaryText,
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 200,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(BarPOSTheme.radiusMedium),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.qr_code_scanner,
-                      size: 120,
-                      color: BarPOSTheme.accentDark,
-                    ),
-                  ),
-                ),
-                SizedBox(height: BarPOSTheme.spacingL),
-                Text(
-                  'Order: $orderNumber',
-                  style: TextStyle(
-                    color: BarPOSTheme.primaryText,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                SizedBox(height: BarPOSTheme.spacingM),
-                // QR Code input text field
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(BarPOSTheme.radiusMedium),
-                    border: Border.all(color: BarPOSTheme.accentDark, width: 1),
-                  ),
-                  child: TextField(
-                    controller: qrCodeController,
-                    decoration: InputDecoration(
-                      labelText: 'QR Code',
-                      labelStyle: TextStyle(color: BarPOSTheme.accentDark),
-                      hintText: 'Scan QR code to get Order Number',
-                      hintStyle: TextStyle(color: Colors.grey[600]),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      prefixIcon: Icon(
-                        Icons.qr_code,
-                        color: BarPOSTheme.accentDark,
-                      ),
-                    ),
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 16,
-                    ),
-                    maxLines: 1,
-                    maxLength: orderNumber.length,
-                    onChanged: (value) {
-                      setState(() {
-                        // This setState now refers to the StatefulBuilder's setState
-                        // The dialog will rebuild when text changes
-                      });
-                    },
-                  ),
-                ),
-                SizedBox(height: BarPOSTheme.spacingS),
-                // Show comparison details when QR code length matches order number length
-                if (qrCode.length == orderNumber.length && qrCode.isNotEmpty) ...[
-                  Container(
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: qrCode == orderNumber 
-                          ? BarPOSTheme.successColor.withOpacity(0.1)
-                          : BarPOSTheme.errorColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(BarPOSTheme.radiusMedium),
-                      border: Border.all(
-                        color: qrCode == orderNumber 
-                            ? BarPOSTheme.successColor.withOpacity(0.3)
-                            : BarPOSTheme.errorColor.withOpacity(0.3)
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              qrCode == orderNumber ? Icons.check_circle : Icons.error,
-                              color: qrCode == orderNumber 
-                                  ? BarPOSTheme.successColor 
-                                  : BarPOSTheme.errorColor,
-                              size: 20,
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              qrCode == orderNumber ? 'QR Code Match' : 'QR Code Mismatch',
-                              style: TextStyle(
-                                color: qrCode == orderNumber 
-                                    ? BarPOSTheme.successColor 
-                                    : BarPOSTheme.errorColor,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (qrCode != orderNumber) ...[
-                          SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('Expected:', style: TextStyle(color: BarPOSTheme.secondaryText, fontSize: 14)),
-                              Text(orderNumber, style: TextStyle(color: BarPOSTheme.successColor, fontSize: 14, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                          SizedBox(height: 4),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('Scanned:', style: TextStyle(color: BarPOSTheme.secondaryText, fontSize: 14)),
-                              Text(qrCode, style: TextStyle(color: BarPOSTheme.errorColor, fontSize: 14, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: BarPOSTheme.spacingS),
-                ],
-                Text(
-                  qrCode.length == orderNumber.length && qrCode.isNotEmpty
-                      ? (qrCode == orderNumber ? 'Ready to complete order' : 'QR code doesn\'t match order')
-                      : 'Enter the QR code details to mark this order as complete',
-                  style: TextStyle(
-                    color: BarPOSTheme.secondaryText,
-                    fontSize: 16,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: Text(
-                  'Cancel',
-                  style: TextStyle(
-                    color: BarPOSTheme.secondaryText,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-              if (qrCode.isNotEmpty) ...[
-                ElevatedButton(
-                  onPressed: () {
-                    if (qrCode == orderNumber) {
-                      Navigator.of(context).pop();
-                      _completeOrder(orderNumber);
-                    }
-                    // For mismatch, button acts as "Try Again" - clears the field
-                    else {
-                      qrCodeController.clear();
-                      setState(() {});
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: qrCode == orderNumber 
-                        ? BarPOSTheme.successColor 
-                        : BarPOSTheme.errorColor,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  ),
-                  child: Text(
-                    qrCode == orderNumber ? 'Mark Complete' : 'Try Again',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ],
-          );
-        },
-      );
-    },
-  );
-}
-  void _completeOrder(String orderNumber) {
-    updateOrderStatus(orderNumber, OrderStatus.completed);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Order $orderNumber marked as complete!',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+    // Show success message for completed orders
+    if (newStatus == OrderStatus.completed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Order $orderNumber marked as complete!',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: BarPOSTheme.successColor,
+          duration: Duration(seconds: 3),
         ),
-        backgroundColor: BarPOSTheme.successColor,
-        duration: Duration(seconds: 3),
-      ),
-    );
+      );
+    }
   }
+
+  @override
+void dispose() {
+  qrCodeService.dispose();
+  super.dispose();
+}
 
   @override
   Widget build(BuildContext context) {
@@ -440,7 +146,7 @@ void _showQRScanDialog(String orderNumber) async {
           backgroundColor: BarPOSTheme.accentDark,
           elevation: 0,
           title: Text(
-            'Stockist Dashboard',
+            'Stockist',
             style: TextStyle(
               color: BarPOSTheme.primaryText,
               fontSize: 28,
@@ -525,6 +231,15 @@ void _showQRScanDialog(String orderNumber) async {
                       },
                     ),
                   ),
+
+      SizedBox(
+        width: MediaQuery.of(context).size.width,
+        height: 20,
+        child: Stack(
+        children: [ qrCodeService.buildScannerInput(),
+        ],
+            ),
+      ),
       
                   // Status Filter Tabs
                   Container(
@@ -548,7 +263,7 @@ void _showQRScanDialog(String orderNumber) async {
                             style: ElevatedButton.styleFrom(
                               backgroundColor:
                                   isSelected
-                                      ? getStatusColor(status)
+                                      ? OrderStatusHelper.getStatusColor(status)
                                       : BarPOSTheme.secondaryDark,
                               foregroundColor:
                                   isSelected
@@ -568,7 +283,7 @@ void _showQRScanDialog(String orderNumber) async {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  getStatusText(status),
+                                  OrderStatusHelper.getStatusText(status),
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
@@ -585,7 +300,7 @@ void _showQRScanDialog(String orderNumber) async {
                                       color:
                                           isSelected
                                               ? Colors.white.withOpacity(0.3)
-                                              : getStatusColor(status),
+                                              : OrderStatusHelper.getStatusColor(status),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
@@ -627,7 +342,7 @@ void _showQRScanDialog(String orderNumber) async {
                             ),
                             SizedBox(height: BarPOSTheme.spacingL),
                             Text(
-                              'No ${getStatusText(selectedFilter).toLowerCase()} orders',
+                              'No ${OrderStatusHelper.getStatusText(selectedFilter).toLowerCase()} orders',
                               style: TextStyle(
                                 color: BarPOSTheme.secondaryText,
                                 fontSize: 24,
@@ -642,322 +357,15 @@ void _showQRScanDialog(String orderNumber) async {
                         itemCount: filteredOrders.length,
                         itemBuilder: (context, index) {
                           final order = filteredOrders[index];
-                          return _buildOrderCard(order);
+                          return OrderCard(
+                            order: order,
+                            onUpdateStatus: updateOrderStatus,
+                          );
                         },
                       ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildOrderCard(StockistOrder order) {
-    return Container(
-      margin: EdgeInsets.only(bottom: BarPOSTheme.spacingL),
-      decoration: BoxDecoration(
-        color: BarPOSTheme.secondaryDark,
-        borderRadius: BorderRadius.circular(BarPOSTheme.radiusLarge),
-        border: Border.all(
-          color: getStatusColor(order.status).withOpacity(0.3),
-          width: 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Order Header
-          Container(
-            padding: EdgeInsets.all(BarPOSTheme.spacingL),
-            decoration: BoxDecoration(
-              color: getStatusColor(order.status).withOpacity(0.1),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(BarPOSTheme.radiusLarge),
-                topRight: Radius.circular(BarPOSTheme.radiusLarge),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      order.orderNumber,
-                      style: TextStyle(
-                        color: BarPOSTheme.primaryText,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.person,
-                          color: BarPOSTheme.secondaryText,
-                          size: 20,
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          order.cashierName,
-                          style: TextStyle(
-                            color: BarPOSTheme.secondaryText,
-                            fontSize: 18,
-                          ),
-                        ),
-                        SizedBox(width: 16),
-                        Icon(
-                          Icons.access_time,
-                          color: BarPOSTheme.secondaryText,
-                          size: 20,
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          DateFormat('HH:mm').format(order.timestamp),
-                          style: TextStyle(
-                            color: BarPOSTheme.secondaryText,
-                            fontSize: 18,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: getStatusColor(order.status),
-                    borderRadius: BorderRadius.circular(
-                      BarPOSTheme.radiusLarge,
-                    ),
-                  ),
-                  child: Text(
-                    getStatusText(order.status),
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Order Items
-          Padding(
-            padding: EdgeInsets.all(BarPOSTheme.spacingL),
-            child: Column(
-              children: [
-                ...order.items
-                    .map(
-                      (item) => Container(
-                        margin: EdgeInsets.only(bottom: BarPOSTheme.spacingM),
-                        padding: EdgeInsets.all(BarPOSTheme.spacingM),
-                        decoration: BoxDecoration(
-                          color: BarPOSTheme.accentDark.withOpacity(0.5),
-                          borderRadius: BorderRadius.circular(
-                            BarPOSTheme.radiusMedium,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 60,
-                              height: 60,
-                              decoration: BoxDecoration(
-                                color: BarPOSTheme.buttonColor.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(
-                                  BarPOSTheme.radiusMedium,
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  item.emoji,
-                                  style: TextStyle(fontSize: 32),
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: BarPOSTheme.spacingM),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item.name,
-                                    style: TextStyle(
-                                      color: BarPOSTheme.primaryText,
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  Text(
-                                    item.category,
-                                    style: TextStyle(
-                                      color: BarPOSTheme.secondaryText,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: BarPOSTheme.buttonColor.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(
-                                  BarPOSTheme.radiusSmall,
-                                ),
-                              ),
-                              child: Text(
-                                'x${item.quantity}',
-                                style: TextStyle(
-                                  color: BarPOSTheme.primaryText,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: BarPOSTheme.spacingM),
-                            Text(
-                              '\$${item.price.toStringAsFixed(2)}',
-                              style: TextStyle(
-                                color: BarPOSTheme.primaryText,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                    .toList(),
-
-                // Total and Actions
-                Container(
-                  padding: EdgeInsets.all(BarPOSTheme.spacingL),
-                  decoration: BoxDecoration(
-                    color: BarPOSTheme.buttonColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(
-                      BarPOSTheme.radiusMedium,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Total:',
-                            style: TextStyle(
-                              color: BarPOSTheme.primaryText,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            '\$${order.total.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              color: BarPOSTheme.primaryText,
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: BarPOSTheme.spacingL),
-                      Row(
-                        children: [
-                          if (order.status == OrderStatus.pending) ...[
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed:
-                                    () => updateOrderStatus(
-                                      order.orderNumber,
-                                      OrderStatus.preparing,
-                                    ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.orange,
-                                  foregroundColor: Colors.white,
-                                  padding: EdgeInsets.symmetric(vertical: 16),
-                                ),
-                                child: Text(
-                                  'Start Preparing',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ] else if (order.status == OrderStatus.preparing) ...[
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed:
-                                    () => updateOrderStatus(
-                                      order.orderNumber,
-                                      OrderStatus.ready,
-                                    ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: BarPOSTheme.successColor,
-                                  foregroundColor: Colors.white,
-                                  padding: EdgeInsets.symmetric(vertical: 16),
-                                ),
-                                child: Text(
-                                  'Mark Ready',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ] else if (order.status == OrderStatus.ready) ...[
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed:
-                                    () => _showQRScanDialog(order.orderNumber),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: BarPOSTheme.buttonColor,
-                                  foregroundColor: Colors.white,
-                                  padding: EdgeInsets.symmetric(vertical: 16),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.qr_code_scanner, size: 24),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'Scan QR to Complete',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
