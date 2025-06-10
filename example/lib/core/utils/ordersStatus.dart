@@ -12,8 +12,8 @@ class OrderStatusHelper {
         return Colors.orange;
       case OrderStatus.ready:
         return BarPOSTheme.successColor;
-      case OrderStatus.completed:
-        return BarPOSTheme.secondaryText;
+      // case OrderStatus.completed:
+      //   return BarPOSTheme.secondaryText;
     }
   }
 
@@ -25,8 +25,8 @@ class OrderStatusHelper {
         return "PREPARING";
       case OrderStatus.ready:
         return "READY";
-      case OrderStatus.completed:
-        return "COMPLETED";
+      // case OrderStatus.completed:
+      //   return "COMPLETED";
     }
   }
 }

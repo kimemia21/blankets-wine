@@ -19,9 +19,9 @@ class OrderCard extends StatelessWidget {
     required this.onUpdateStatus,
   }) : super(key: key);
 
-  void _completeOrder(String orderNumber) {
-    onUpdateStatus(orderNumber, OrderStatus.completed);
-  }
+  // void _completeOrder(String orderNumber) {
+  //   onUpdateStatus(orderNumber, OrderStatus.completed);
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -192,7 +192,7 @@ class OrderCard extends StatelessWidget {
                                 ),
                               ),
                               child: Text(
-                                'x${item.quantity}',
+                                'x ${item.quantity}',
                                 style: TextStyle(
                                   color: BarPOSTheme.primaryText,
                                   fontSize: 20,
@@ -201,14 +201,7 @@ class OrderCard extends StatelessWidget {
                               ),
                             ),
                             SizedBox(width: BarPOSTheme.spacingM),
-                            Text(
-                              '\$${item.price.toStringAsFixed(2)}',
-                              style: TextStyle(
-                                color: BarPOSTheme.primaryText,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                       
                           ],
                         ),
                       ),
@@ -226,103 +219,9 @@ class OrderCard extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Total:',
-                            style: TextStyle(
-                              color: BarPOSTheme.primaryText,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            '\$${order.total.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              color: BarPOSTheme.primaryText,
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
+                 
                       SizedBox(height: BarPOSTheme.spacingL),
-                      Row(
-                        children: [
-                          if (order.status == OrderStatus.pending) ...[
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () => onUpdateStatus(
-                                  order.orderNumber,
-                                  OrderStatus.preparing,
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.orange,
-                                  foregroundColor: Colors.white,
-                                  padding: EdgeInsets.symmetric(vertical: 16),
-                                ),
-                                child: Text(
-                                  'Start Preparing',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ] else if (order.status == OrderStatus.preparing) ...[
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () => onUpdateStatus(
-                                  order.orderNumber,
-                                  OrderStatus.ready,
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: BarPOSTheme.successColor,
-                                  foregroundColor: Colors.white,
-                                  padding: EdgeInsets.symmetric(vertical: 16),
-                                ),
-                                child: Text(
-                                  'Mark Ready',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ] else if (order.status == OrderStatus.ready) ...[
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () => QRScanDialog(orderNumber: order.orderNumber,
-                                   onComplete:()=> _completeOrder(order.orderNumber)),
-                                
-                             
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: BarPOSTheme.buttonColor,
-                                  foregroundColor: Colors.white,
-                                  padding: EdgeInsets.symmetric(vertical: 16),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.qr_code_scanner, size: 24),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'Scan QR to Complete',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
+                   
                     ],
                   ),
                 ),

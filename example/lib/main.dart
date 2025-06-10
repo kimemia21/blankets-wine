@@ -6,6 +6,7 @@ import 'package:blankets_and_wines/blankets_and_wines.dart';
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
 import 'package:blankets_and_wines_example/features/Stockist/Stockist.dart';
 import 'package:blankets_and_wines_example/features/Test.dart';
+import 'package:blankets_and_wines_example/features/cashier/cashier.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -41,7 +42,8 @@ void main() async {
     log('Stacktrace: $stacktrace');
   }
   runApp(
-   MyApp()
+  //  MyApp()
+  BarPOSApp()
   // QRScannerPage()
 //  StockistMainScreen()
     );
