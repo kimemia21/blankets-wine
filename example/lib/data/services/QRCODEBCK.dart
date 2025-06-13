@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 
+import 'package:blankets_and_wines_example/core/utils/initializers.dart';
 import 'package:blankets_and_wines_example/core/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

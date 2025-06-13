@@ -1,255 +1,225 @@
 import 'package:flutter/material.dart';
-import 'package:blankets_and_wines_example/core/theme/theme.dart';
 
-class QRScanDialog extends StatefulWidget {
-  final String orderNumber;
-  final VoidCallback onComplete;
+class AlertHandler {
+  final BuildContext context;
+  final bool Function() isMounted;
+  final VoidCallback? onStateChanged;
 
-  const QRScanDialog({
-    Key? key,
-    required this.orderNumber,
-    required this.onComplete,
-  }) : super(key: key);
+  AlertHandler({
+    required this.context,
+    required this.isMounted,
+    this.onStateChanged,
+  });
 
-  @override
-  _QRScanDialogState createState() => _QRScanDialogState();
+  void handleSuccess(
+    String message, {
+    VoidCallback? onSuccess,
+    Future<void> Function()? onAsyncSuccess,
+  }) async {
+    showAlert('Success', message, Colors.green);
+    
+    if (onSuccess != null) {
+      onSuccess();
+    }
+    
+    if (onAsyncSuccess != null) {
+      await onAsyncSuccess();
+    }
+    
+    _triggerStateChange();
+  }
+
+  void handleError(
+    String error, {
+    VoidCallback? onError,
+  }) {
+    showAlert('Error', error, Colors.red);
+    
+    if (onError != null) {
+      onError();
+    }
+    
+    _triggerStateChange();
+  }
+
+  void showAlert(String title, String message, Color color) {
+    if (!isMounted()) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          elevation: 8,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white,
+                  color.withOpacity(0.05),
+                ],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.2),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Animated Icon with Circle Background
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: color.withOpacity(0.1),
+                    border: Border.all(
+                      color: color.withOpacity(0.3),
+                      width: 2,
+                    ),
+                  ),
+                  child: Icon(
+                    title == 'Success' ? Icons.check_circle_rounded : Icons.error_rounded,
+                    color: color,
+                    size: 40,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                
+                // Title with Better Typography
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                    letterSpacing: 0.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                
+                // Message with Outdoor-friendly styling
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.grey.shade200,
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    message,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.black87,
+                      height: 1.4,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
+                // Enhanced Action Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: color,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 4,
+                      shadowColor: color.withOpacity(0.4),
+                    ),
+                    child: const Text(
+                      'GOT IT',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _triggerStateChange() {
+    if (onStateChanged != null) {
+      onStateChanged!();
+    }
+  }
 }
 
-class _QRScanDialogState extends State<QRScanDialog> {
-  final TextEditingController qrCodeController = TextEditingController();
+// Usage example:
+/*
+class YourWidget extends StatefulWidget {
+  @override
+  _YourWidgetState createState() => _YourWidgetState();
+}
+
+class _YourWidgetState extends State<YourWidget> {
+  late AlertHandler _alertHandler;
+  String _statusMessage = '';
+  ScanningService? _service;
 
   @override
-  void dispose() {
-    qrCodeController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    String qrCode = qrCodeController.text.trim();
-    
-    return AlertDialog(
-      backgroundColor: BarPOSTheme.secondaryDark,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(BarPOSTheme.radiusLarge),
-      ),
-      title: Text(
-        'QR Code Input',
-        style: TextStyle(
-          color: BarPOSTheme.primaryText,
-          fontSize: 28,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildQRIcon(),
-          SizedBox(height: BarPOSTheme.spacingL),
-          _buildOrderNumber(),
-          SizedBox(height: BarPOSTheme.spacingM),
-          _buildQRInput(),
-          SizedBox(height: BarPOSTheme.spacingS),
-          _buildValidationWidget(qrCode),
-          _buildInstructionText(qrCode),
-        ],
-      ),
-      actions: [
-        _buildCancelButton(),
-        if (qrCode.isNotEmpty) _buildActionButton(qrCode),
-      ],
+  void initState() {
+    super.initState();
+    _alertHandler = AlertHandler(
+      context: context,
+      isMounted: () => mounted,
+      onStateChanged: () => setState(() {}),
     );
   }
 
-  Widget _buildQRIcon() {
-    return Container(
-      width: 200,
-      height: 200,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(BarPOSTheme.radiusMedium),
-      ),
-      child: Center(
-        child: Icon(
-          Icons.qr_code_scanner,
-          size: 120,
-          color: BarPOSTheme.accentDark,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOrderNumber() {
-    return Text(
-      'Order: ${widget.orderNumber}',
-      style: TextStyle(
-        color: BarPOSTheme.primaryText,
-        fontSize: 20,
-        fontWeight: FontWeight.w600,
-      ),
-    );
-  }
-
-  Widget _buildQRInput() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(BarPOSTheme.radiusMedium),
-        border: Border.all(color: BarPOSTheme.accentDark, width: 1),
-      ),
-      child: TextField(
-        controller: qrCodeController,
-        decoration: InputDecoration(
-          labelText: 'QR Code',
-          labelStyle: TextStyle(color: BarPOSTheme.accentDark),
-          hintText: 'Scan QR code to get Order Number',
-          hintStyle: TextStyle(color: Colors.grey[600]),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          prefixIcon: Icon(
-            Icons.qr_code,
-            color: BarPOSTheme.accentDark,
-          ),
-        ),
-        style: TextStyle(
-          color: Colors.black,
-          fontSize: 16,
-        ),
-        maxLines: 1,
-        maxLength: widget.orderNumber.length,
-        onChanged: (value) {
-          setState(() {});
-        },
-      ),
-    );
-  }
-
-  Widget _buildValidationWidget(String qrCode) {
-    if (qrCode.length != widget.orderNumber.length || qrCode.isEmpty) {
-      return SizedBox.shrink();
-    }
-
-    bool isMatch = qrCode == widget.orderNumber;
-    
-    return Container(
-      padding: EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isMatch 
-            ? BarPOSTheme.successColor.withOpacity(0.1)
-            : BarPOSTheme.errorColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(BarPOSTheme.radiusMedium),
-        border: Border.all(
-          color: isMatch 
-              ? BarPOSTheme.successColor.withOpacity(0.3)
-              : BarPOSTheme.errorColor.withOpacity(0.3)
-        ),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Icon(
-                isMatch ? Icons.check_circle : Icons.error,
-                color: isMatch 
-                    ? BarPOSTheme.successColor 
-                    : BarPOSTheme.errorColor,
-                size: 20,
-              ),
-              SizedBox(width: 8),
-              Text(
-                isMatch ? 'QR Code Match' : 'QR Code Mismatch',
-                style: TextStyle(
-                  color: isMatch 
-                      ? BarPOSTheme.successColor 
-                      : BarPOSTheme.errorColor,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          if (!isMatch) ...[
-            SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Expected:', style: TextStyle(color: BarPOSTheme.secondaryText, fontSize: 14)),
-                Text(widget.orderNumber, style: TextStyle(color: BarPOSTheme.successColor, fontSize: 14, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            SizedBox(height: 4),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Scanned:', style: TextStyle(color: BarPOSTheme.secondaryText, fontSize: 14)),
-                Text(qrCode, style: TextStyle(color: BarPOSTheme.errorColor, fontSize: 14, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInstructionText(String qrCode) {
-    String instruction;
-    if (qrCode.length == widget.orderNumber.length && qrCode.isNotEmpty) {
-      instruction = qrCode == widget.orderNumber 
-          ? 'Ready to complete order' 
-          : 'QR code doesn\'t match order';
-    } else {
-      instruction = 'Enter the QR code details to mark this order as complete';
-    }
-
-    return Text(
-      instruction,
-      style: TextStyle(
-        color: BarPOSTheme.secondaryText,
-        fontSize: 16,
-      ),
-      textAlign: TextAlign.center,
-    );
-  }
-
-  Widget _buildCancelButton() {
-    return TextButton(
-      onPressed: () {
-        Navigator.of(context).pop();
+  void _handleSuccess(String message) async {
+    await _alertHandler.handleSuccess(
+      message,
+      onSuccess: () {
+        _statusMessage = message;
       },
-      child: Text(
-        'Cancel',
-        style: TextStyle(
-          color: BarPOSTheme.secondaryText,
-          fontSize: 18,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionButton(String qrCode) {
-    bool isMatch = qrCode == widget.orderNumber;
-    
-    return ElevatedButton(
-      onPressed: () {
-        if (isMatch) {
-          Navigator.of(context).pop();
-          widget.onComplete();
+      onAsyncSuccess: () async {
+        if (_service!.isScanning) {
+          await _service!.pauseScanning();
         } else {
-          qrCodeController.clear();
-          setState(() {});
+          await _service!.resumeScanning();
         }
       },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: isMatch 
-            ? BarPOSTheme.successColor 
-            : BarPOSTheme.errorColor,
-        foregroundColor: Colors.white,
-        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      ),
-      child: Text(
-        isMatch ? 'Mark Complete' : 'Try Again',
-        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-      ),
+    );
+  }
+
+  void _handleError(String error) {
+    _alertHandler.handleError(
+      error,
+      onError: () {
+        _statusMessage = 'Error: $error';
+      },
     );
   }
 }
+*/

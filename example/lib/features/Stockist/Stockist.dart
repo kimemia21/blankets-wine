@@ -1,13 +1,13 @@
 import 'dart:async';
 
-import 'package:blankets_and_wines/blankets_and_wines.dart';
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
 import 'package:blankets_and_wines_example/core/utils/ordersStatus.dart';
 import 'package:blankets_and_wines_example/data/MockData.dart';
-import 'package:blankets_and_wines_example/data/services/QRCODEBCK.dart';
+import 'package:blankets_and_wines_example/services/QrcodeService.dart';
 import 'package:blankets_and_wines_example/widgets/OrderCard.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 // Order model for stockist view
 class StockistOrder {
@@ -44,7 +44,7 @@ class OrderItem {
   });
 }
 
-enum OrderStatus { pending, preparing, ready  }
+enum OrderStatus { pending, preparing, ready }
 
 class StockistMainScreen extends StatefulWidget {
   @override
@@ -56,361 +56,187 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
   String searchQuery = '';
   TextEditingController searchController = TextEditingController();
 
+  // QR Code Scanner related variables
+  QRCodeVerificationService? _qrService;
+  bool _isQRInitialized = false;
+  String _qrStatusMessage = 'QR Scanner ready';
+  bool _showQRScanner = false;
+
   // Initialize orders from mock data
   late List<StockistOrder> orders;
 
-  final qrCodeService = QRCodeService();
+  @override
+  void initState() {
+    super.initState();
+    orders = MockOrdersData.getOrders();
+    _initializeQRService();
+  }
 
-  final _manualFocusNode = FocusNode();
+  // Initialize QR Service
+  Future<void> _initializeQRService() async {
+    try {
+      _qrService = QRCodeVerificationService();
 
-
-void initState() {
-  super.initState();
-  orders = MockOrdersData.getOrders();
-
-  qrCodeService.initialize();
-  qrCodeService.onScan.listen((code) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _showAutoDismissingError(code);
-      }
-    });
-    print('Scanned code: $code');
-  });
-
-  qrCodeService.onError.listen((error) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _showAutoDismissingError(error);
-      }
-    });
-  });
-
-  qrCodeService.onReady.listen((ready) {
-    if (ready) {
-      print('QR Scanner ready');
-    }
-  });
-  qrCodeService.simulateScan('TEST-CODE-123');
-  qrCodeService.registerFocusNode(_manualFocusNode);
-}
-
-// Auto-dismissing success display with large, readable text
-void _showAutoDismissingScanResult(String code) {
-  showGeneralDialog(
-    context: context,
-    barrierDismissible: false,
-    barrierColor: Colors.black54,
-    transitionDuration: Duration(milliseconds: 200),
-    pageBuilder: (context, animation, secondaryAnimation) {
-      return AnimatedBuilder(
-        animation: animation,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: animation.value,
-            child: Scaffold(
-              backgroundColor: Colors.transparent,
-              body: Center(
-                child: Container(
-                  margin: EdgeInsets.all(20),
-                  padding: EdgeInsets.all(40),
-                  constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(context).size.width * 0.9,
-                    maxHeight: MediaQuery.of(context).size.height * 0.7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.green, width: 4),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 20,
-                        spreadRadius: 8,
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Large success icon
-                      Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.check_circle,
-                          color: Colors.white,
-                          size: 60,
-                        ),
-                      ),
-                      SizedBox(height: 30),
-                      
-                      // Large title
-                      Text(
-                        'ORDER Number SCANNED',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                          letterSpacing: 2,
-                        ),
-                      ),
-                      SizedBox(height: 40),
-                      
-                      // Extra large code display with high contrast
-                      Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.all(30),
-                        decoration: BoxDecoration(
-                          color: Colors.black87,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.green, width: 2),
-                        ),
-                        child: Text(
-                          code,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 42,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            fontFamily: 'monospace',
-                            letterSpacing: 4,
-                            height: 1.2,
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 30),
-                      
-                      // Status with countdown
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          borderRadius: BorderRadius.circular(25),
-                        ),
-                        child: Text(
-                          '✓ SUCCESS - AUTO CLOSING',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
+      await _qrService!.initialize(
+        onSuccess: (message) {
+          _handleQRSuccess(message);
         },
+        onError: _handleQRError,
+        onItemScanned: _handleQRItemScanned,
+        onStatusChanged: _handleQRStatusChanged,
       );
-    },
-  );
 
-  // Auto dismiss after 3 seconds
-  Timer(Duration(seconds: 3), () {
-    if (mounted && Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-      // _processScannedCode(code);
+      setState(() {
+        _isQRInitialized = true;
+        _qrStatusMessage = 'QR Scanner ready';
+      });
+    } catch (e) {
+      setState(() {
+        _qrStatusMessage = 'Failed to initialize QR scanner: $e';
+      });
     }
-  });
-}
+  }
 
-// Auto-dismissing error display
-void _showAutoDismissingError(String error) {
-  showGeneralDialog(
-    context: context,
-    barrierDismissible: false,
-    barrierColor: Colors.black54,
-    transitionDuration: Duration(milliseconds: 200),
-    pageBuilder: (context, animation, secondaryAnimation) {
-      return AnimatedBuilder(
-        animation: animation,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: animation.value,
-            child: Scaffold(
-              backgroundColor: Colors.transparent,
-              body: Center(
-                child: Container(
-                  margin: EdgeInsets.all(20),
-                  padding: EdgeInsets.all(40),
-                  constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(context).size.width * 0.9,
-                    maxHeight: MediaQuery.of(context).size.height * 0.7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.red, width: 4),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 20,
-                        spreadRadius: 8,
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Large error icon
-                      Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.error,
-                          color: Colors.white,
-                          size: 60,
-                        ),
-                      ),
-                      SizedBox(height: 30),
-                      
-                      // Large title
-                      Text(
-                        'ORDER ALREADY PROCESSED',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.red,
-                          letterSpacing: 2,
-                        ),
-                      ),
-                      SizedBox(height: 40),
-                      
-                      // Error message display
-                      Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.all(30),
-                        decoration: BoxDecoration(
-                          color: Colors.red[50],
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.red[300]!, width: 2),
-                        ),
-                        child: Text(
-                          error,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                            height: 1.3,
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 30),
-                      
-                      // Status with countdown
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(25),
-                        ),
-                        child: Text(
-                          'ORDER IS ALREADY PROCESSED AND MARKED READY',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
+  void _handleQRSuccess(String message) async {
+    _showQRAlert('Success', message, Colors.green);
+    
+    setState(() {
+      _qrStatusMessage = message;
+    });
+    
+    if (_qrService!.isScanning) {
+      await _qrService!.pauseScanning();
+    } else {
+      await _qrService!.resumeScanning();
+    }
+  }
+
+  void _handleQRError(String error) {
+    _showQRAlert('Error', error, Colors.red);
+    setState(() {
+      _qrStatusMessage = 'Error: $error';
+    });
+  }
+
+  void _handleQRItemScanned(ScannedItem item) {
+    setState(() {
+      _qrStatusMessage = 'Scanned: ${item.code} (${item.status.name})';
+    });
+    
+    // Try to find and update order based on scanned code
+    _processScannedOrder(item.code);
+  }
+
+  void _handleQRStatusChanged(ScannedItem item) {
+    setState(() {
+      _qrStatusMessage = 'Status changed: ${item.code} → ${item.status.name}';
+    });
+  }
+
+  void _processScannedOrder(String scannedCode) {
+    // Find order by order number or any other identifier
+    final orderIndex = orders.indexWhere(
+      (order) => order.orderNumber == scannedCode,
+    );
+    
+    if (orderIndex >= 0) {
+      final currentOrder = orders[orderIndex];
+      OrderStatus newStatus;
+      
+      // Progress the order to next status
+      switch (currentOrder.status) {
+        case OrderStatus.pending:
+          newStatus = OrderStatus.preparing;
+          break;
+        case OrderStatus.preparing:
+          newStatus = OrderStatus.ready;
+          break;
+        case OrderStatus.ready:
+          newStatus = OrderStatus.ready; // Already at final status
+          break;
+      }
+      
+      updateOrderStatus(scannedCode, newStatus);
+      
+      _showQRAlert(
+        'Order Updated', 
+        'Order $scannedCode updated to ${OrderStatusHelper.getStatusText(newStatus)}',
+        OrderStatusHelper.getStatusColor(newStatus)
       );
-    },
-  );
-
-  // Auto dismiss after 4 seconds (longer for error to be read)
-  Timer(Duration(seconds: 4), () {
-    if (mounted && Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
+      
+      // Close QR scanner after successful scan
+      setState(() {
+        _showQRScanner = false;
+      });
+    } else {
+      _showQRAlert(
+        'Order Not Found', 
+        'No order found with code: $scannedCode',
+        Colors.orange
+      );
     }
-  });
-}
+  }
 
-// Alternative: Enhanced SnackBar for less intrusive display
-void _showEnhancedSnackBar(String code) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Container(
-        padding: EdgeInsets.symmetric(vertical: 16),
-        child: Row(
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: Colors.green,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.qr_code_scanner,
-                color: Colors.white,
+  void _showQRAlert(String title, String message, Color color) {
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: BarPOSTheme.secondaryDark,
+          title: Row(
+            children: [
+              Icon(
+                title == 'Success' ? Icons.check_circle : 
+                title == 'Error' ? Icons.error : Icons.info,
+                color: color,
                 size: 28,
               ),
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'QR CODE SCANNED',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    code,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      fontFamily: 'monospace',
-                      letterSpacing: 2,
-                    ),
-                  ),
-                ],
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: TextStyle(
+                  color: BarPOSTheme.primaryText,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
+            ],
+          ),
+          content: Text(
+            message,
+            style: TextStyle(
+              color: BarPOSTheme.primaryText,
+              fontSize: 16,
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: Text(
+                'OK',
+                style: TextStyle(
+                  color: BarPOSTheme.buttonColor,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
             ),
           ],
-        ),
-      ),
-      backgroundColor: Colors.green[700],
-      duration: Duration(seconds: 3),
-      behavior: SnackBarBehavior.floating,
-      margin: EdgeInsets.all(20),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      elevation: 8,
-    ),
-  );
-}
+        );
+      },
+    );
+  }
+
+  void _toggleQRScanner() {
+    setState(() {
+      _showQRScanner = !_showQRScanner;
+    });
+  }
+
   List<StockistOrder> get filteredOrders {
     return orders.where((order) {
       bool statusMatch = selectedFilter == order.status;
@@ -441,28 +267,121 @@ void _showEnhancedSnackBar(String code) {
         );
       }
     });
+  }
 
-    // // Show success message for completed orders
-    // if (newStatus == OrderStatus.completed) {
-      
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     SnackBar(
-    //       content: Text(
-    //         'Order $orderNumber marked as complete!',
-    //         style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-    //       ),
-    //       backgroundColor: BarPOSTheme.successColor,
-    //       duration: Duration(seconds: 3),
-    //     ),
-    //   );
-    // }
+  Widget _buildQRScannerOverlay() {
+    if (!_showQRScanner || !_isQRInitialized || _qrService == null) {
+      return SizedBox.shrink();
+    }
+
+    return Container(
+      color: Colors.black.withOpacity(0.8),
+      child: Column(
+        children: [
+          // QR Scanner Header
+          Container(
+            padding: EdgeInsets.all(BarPOSTheme.spacingL),
+            color: BarPOSTheme.accentDark,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Scan Order QR Code',
+                  style: TextStyle(
+                    color: BarPOSTheme.primaryText,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Row(
+                  children: [
+                    if (_qrService != null)
+                      IconButton(
+                        icon: Icon(
+                          _qrService!.isScanning ? Icons.pause : Icons.play_arrow,
+                          color: BarPOSTheme.primaryText,
+                          size: 32,
+                        ),
+                        onPressed: () async {
+                          if (_qrService!.isScanning) {
+                            await _qrService!.pauseScanning();
+                          } else {
+                            await _qrService!.resumeScanning();
+                          }
+                          setState(() {});
+                        },
+                      ),
+                    IconButton(
+                      icon: Icon(
+                        Icons.close,
+                        color: BarPOSTheme.primaryText,
+                        size: 32,
+                      ),
+                      onPressed: _toggleQRScanner,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Status Display
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(BarPOSTheme.spacingM),
+            color: BarPOSTheme.secondaryDark,
+            child: Text(
+              'Status: $_qrStatusMessage',
+              style: TextStyle(
+                color: BarPOSTheme.primaryText,
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+
+          // Camera View
+          Expanded(
+            child: Container(
+              margin: EdgeInsets.all(BarPOSTheme.spacingL),
+              decoration: BoxDecoration(
+                border: Border.all(color: BarPOSTheme.buttonColor, width: 3),
+                borderRadius: BorderRadius.circular(BarPOSTheme.radiusMedium),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(BarPOSTheme.radiusMedium),
+                child: MobileScanner(
+                  controller: _qrService!.controller,
+                  onDetect: (result) {
+                    // Detection is handled by the service
+                  },
+                ),
+              ),
+            ),
+          ),
+
+          // Instructions
+          Container(
+            padding: EdgeInsets.all(BarPOSTheme.spacingL),
+            child: Text(
+              'Point the camera at an order QR code to scan and update status',
+              style: TextStyle(
+                color: BarPOSTheme.primaryText,
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   void dispose() {
-    qrCodeService.dispose();
-
-    _manualFocusNode.dispose();
+    _qrService?.dispose();
     searchController.dispose();
     super.dispose();
   }
@@ -513,189 +432,210 @@ void _showEnhancedSnackBar(String code) {
             ),
           ],
         ),
-        body: Column(
+        body: Stack(
           children: [
-            // Search and Filter Section
-            Container(
-              padding: EdgeInsets.all(BarPOSTheme.spacingL),
-              color: BarPOSTheme.accentDark,
-              child: Column(
-                children: [
-                  // Search Bar
-                  Container(
-                    margin: EdgeInsets.only(bottom: BarPOSTheme.spacingL),
-                    child: TextField(
-                      controller: searchController,
-                         focusNode: _manualFocusNode,
-                      style: TextStyle(
-                        color: BarPOSTheme.primaryText,
-                        fontSize: 20,
-                      ),
-                      decoration: InputDecoration(
-                      
-                        hintText: 'Search orders...',
-                        hintStyle: TextStyle(
-                          color: BarPOSTheme.secondaryText,
-                          fontSize: 20,
-                        ),
-                        prefixIcon: Icon(
-                          Icons.search,
-                          color: BarPOSTheme.secondaryText,
-                          size: 32,
-                        ),
-                        filled: true,
-                        fillColor: BarPOSTheme.secondaryDark,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(
-                            BarPOSTheme.radiusMedium,
-                          ),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 16,
-                        ),
-                      ),
-                      onChanged: (value) {
-                        setState(() {
-                          searchQuery = value;
-                        });
-                      },
-                    ),
-                  ),
+            // Main Content
+            Column(
+              children: [
+                // Search and Filter Section
+                Container(
+                  padding: EdgeInsets.all(BarPOSTheme.spacingL),
+                  color: BarPOSTheme.accentDark,
+                  child: Column(
+                    children: [
+                      // Status Filter Tabs
+                      Container(
+                        height: 70,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: OrderStatus.values.length,
+                          itemBuilder: (context, index) {
+                            final status = OrderStatus.values[index];
+                            final isSelected = selectedFilter == status;
+                            final count = getOrderCountByStatus(status);
 
-                  SizedBox(
-                    width: MediaQuery.of(context).size.width,
-                    height: 20,
-                    child: Stack(children: 
-                    [qrCodeService.buildScannerInput()]),
-                  ),
-
-                  // Status Filter Tabs
-                  Container(
-                    height: 70,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: OrderStatus.values.length,
-                      itemBuilder: (context, index) {
-                        final status = OrderStatus.values[index];
-                        final isSelected = selectedFilter == status;
-                        final count = getOrderCountByStatus(status);
-
-                        return Container(
-                          margin: EdgeInsets.only(right: BarPOSTheme.spacingM),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                selectedFilter = status;
-                              });
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  isSelected
+                            return Container(
+                              margin: EdgeInsets.only(right: BarPOSTheme.spacingM),
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    selectedFilter = status;
+                                  });
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isSelected
                                       ? OrderStatusHelper.getStatusColor(status)
                                       : BarPOSTheme.secondaryDark,
-                              foregroundColor:
-                                  isSelected
+                                  foregroundColor: isSelected
                                       ? Colors.white
                                       : BarPOSTheme.primaryText,
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 16,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                  BarPOSTheme.radiusLarge,
-                                ),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  OrderStatusHelper.getStatusText(status),
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      BarPOSTheme.radiusLarge,
+                                    ),
                                   ),
                                 ),
-                                if (count > 0) ...[
-                                  SizedBox(width: 8),
-                                  Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          isSelected
-                                              ? Colors.white.withOpacity(0.3)
-                                              : OrderStatusHelper.getStatusColor(
-                                                status,
-                                              ),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      '$count',
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      OrderStatusHelper.getStatusText(status),
                                       style: TextStyle(
-                                        fontSize: 16,
+                                        fontSize: 18,
                                         fontWeight: FontWeight.bold,
-                                        color:
-                                            isSelected
-                                                ? Colors.white
-                                                : Colors.white,
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ],
+                                    if (count > 0) ...[
+                                      SizedBox(width: 8),
+                                      Container(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: isSelected
+                                              ? Colors.white.withOpacity(0.3)
+                                              : OrderStatusHelper.getStatusColor(status),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          '$count',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+
+                      // Search Bar
+                      Container(
+                        margin: EdgeInsets.only(bottom: BarPOSTheme.spacingL),
+                        child: TextField(
+                          controller: searchController,
+                          style: TextStyle(
+                            color: BarPOSTheme.primaryText,
+                            fontSize: 20,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'Search orders...',
+                            hintStyle: TextStyle(
+                              color: BarPOSTheme.secondaryText,
+                              fontSize: 20,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              color: BarPOSTheme.secondaryText,
+                              size: 32,
+                            ),
+                            filled: true,
+                            fillColor: BarPOSTheme.secondaryDark,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(
+                                BarPOSTheme.radiusMedium,
+                              ),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 16,
                             ),
                           ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                          onChanged: (value) {
+                            setState(() {
+                              searchQuery = value;
+                            });
+                          },
+                        ),
+                      ),
 
-            // Orders List
-            Expanded(
-              child:
-                  filteredOrders.isEmpty
-                      ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                      // QR Scanner Button
+                      ElevatedButton(
+                        onPressed: _isQRInitialized ? _toggleQRScanner : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _showQRScanner 
+                              ? Colors.red 
+                              : BarPOSTheme.buttonColor,
+                          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(BarPOSTheme.radiusLarge),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              Icons.receipt_long_outlined,
-                              color: BarPOSTheme.secondaryText,
-                              size: 80,
+                              _showQRScanner ? Icons.close : Icons.qr_code_scanner, 
+                              size: 24
                             ),
-                            SizedBox(height: BarPOSTheme.spacingL),
+                            SizedBox(width: 8),
                             Text(
-                              'No ${OrderStatusHelper.getStatusText(selectedFilter).toLowerCase()} orders',
+                              _showQRScanner ? 'Close Scanner' : 'Scan Order',
                               style: TextStyle(
-                                color: BarPOSTheme.secondaryText,
-                                fontSize: 24,
-                                fontWeight: FontWeight.w600,
+                                fontSize: 18, 
+                                fontWeight: FontWeight.bold
                               ),
                             ),
                           ],
                         ),
-                      )
-                      : ListView.builder(
-                        padding: EdgeInsets.all(BarPOSTheme.spacingL),
-                        itemCount: filteredOrders.length,
-                        itemBuilder: (context, index) {
-                          final order = filteredOrders[index];
-                          return OrderCard(
-                            order: order,
-                            onUpdateStatus: updateOrderStatus,
-                          );
-                        },
                       ),
+                    ],
+                  ),
+                ),
+
+                // Orders List
+                Expanded(
+                  child: filteredOrders.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.receipt_long_outlined,
+                                color: BarPOSTheme.secondaryText,
+                                size: 80,
+                              ),
+                              SizedBox(height: BarPOSTheme.spacingL),
+                              Text(
+                                'No ${OrderStatusHelper.getStatusText(selectedFilter).toLowerCase()} orders',
+                                style: TextStyle(
+                                  color: BarPOSTheme.secondaryText,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: EdgeInsets.all(BarPOSTheme.spacingL),
+                          itemCount: filteredOrders.length,
+                          itemBuilder: (context, index) {
+                            final order = filteredOrders[index];
+                            return OrderCard(
+                              order: order,
+                              onUpdateStatus: updateOrderStatus,
+                            );
+                          },
+                        ),
+                ),
+              ],
             ),
+
+            // QR Scanner Overlay
+            if (_showQRScanner) _buildQRScannerOverlay(),
           ],
         ),
       ),
