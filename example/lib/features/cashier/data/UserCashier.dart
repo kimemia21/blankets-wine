@@ -27,7 +27,7 @@ class UserCashier {
     return UserCashier(
       fName: '',
       lName: '',
-      barId: 0,
+      barId: 1,
       isAdmin: false,
       token: '',
     );

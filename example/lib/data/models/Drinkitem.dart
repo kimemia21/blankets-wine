@@ -1,29 +1,30 @@
 class DrinkItem {
-  final String id;
+  final int id;
   final String name;
-  final String category;
+  final int categoryId;
   final double price;
   final String image;
-  final int quantity;
+  final int stock;
 
   DrinkItem({
     required this.id,
     required this.name,
-    required this.category,
+    required this.categoryId,
     required this.price,
     required this.image,
-    required this.quantity,
+    required this.stock,
   });
 
   // ✅ fromJson factory constructor
   factory DrinkItem.fromJson(Map<String, dynamic> json) {
+    print("server json $json");
     return DrinkItem(
-      id: json['id'] ?? '',
+      id: json['id'] ?? 0,
       name: json['name'] ?? '',
-      category: json['category'] ?? '',
-      price: (json['price'] as num).toDouble(), // Ensures double
+      categoryId: json['category'] ?? 0,
+      price: ( double.parse(json['price'])),
       image: json['image'] ?? '',
-      quantity: json['quantity'] ?? 0,
+      stock: json['stock'] ?? 0,
     );
   }
 
@@ -32,10 +33,10 @@ class DrinkItem {
     return {
       'id': id,
       'name': name,
-      'category': category,
+      'categoryId': categoryId,
       'price': price,
       'image': image,
-      'quantity': quantity,
+      'stock': stock,
     };
   }
 }

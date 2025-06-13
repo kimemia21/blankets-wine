@@ -1,6 +1,7 @@
 import 'package:blankets_and_wines/blankets_and_wines.dart';
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
 import 'package:blankets_and_wines_example/core/utils/ToastService.dart';
+import 'package:blankets_and_wines_example/core/utils/initializers.dart';
 import 'package:blankets_and_wines_example/core/utils/sdkinitializer.dart';
 import 'package:blankets_and_wines_example/features/Stockist/Stockist.dart';
 import 'package:blankets_and_wines_example/features/Test.dart';
@@ -35,17 +36,20 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
+    comms.setAuthToken(
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Miwic2hvcCI6MSwicm9sZSI6MiwiaWF0IjoxNzQ5ODE1OTM3LCJleHAiOjE3NDk5MDIzMzd9.aYlEme5HJd5bZuReQGM3hSUyE4CAjc_Z5WXLNsKZZ_Q",
+    );
     return MaterialApp(
-      home:    OnboardingPage(),
+      home: Cashier(),
+      // OnboardingPage(),
       navigatorKey: ToastService.navigatorKey,
       // StockistMainScreen()
       // QRCodeScannerScreen(),
 
-  // QRCodeScannerScreen()
+      // QRCodeScannerScreen()
     );
   }
 }
-
 
 class QRCodeScannerScreen extends StatefulWidget {
   const QRCodeScannerScreen({Key? key}) : super(key: key);
@@ -120,8 +124,6 @@ class _QRCodeScannerScreenState extends State<QRCodeScannerScreen> {
       _statusMessage = 'Status changed: ${item.code} → ${item.status.name}';
     });
   }
-
- 
 
   void _showAlert(String title, String message, Color color) {
     if (!mounted) return;

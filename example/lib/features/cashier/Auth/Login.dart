@@ -3,6 +3,7 @@ import 'package:blankets_and_wines_example/core/theme/theme.dart';
 import 'package:blankets_and_wines_example/core/utils/ToastService.dart';
 import 'package:blankets_and_wines_example/core/utils/initializers.dart';
 import 'package:blankets_and_wines_example/features/cashier/Auth/authfunc.dart';
+import 'package:blankets_and_wines_example/features/cashier/main/CashierMain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -85,10 +86,13 @@ class _CashierLoginPageState extends State<CashierLoginPage>
       bool login = await CashierAuth.login(data: data);
       if (login) {
         setState(() => _isLoading = false);
-        print("Success");
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => Cashier()),
+        );
       } else {
         setState(() => _isLoading = false);
-    
+
         print("Failed");
       }
     } finally {
@@ -110,9 +114,8 @@ class _CashierLoginPageState extends State<CashierLoginPage>
     return Scaffold(
       body: Container(
         height: MediaQuery.of(context).size.height,
-        color:BarPOSTheme.secondaryDark ,
-       
-    
+        color: BarPOSTheme.secondaryDark,
+
         child: SafeArea(
           child: AnimatedBuilder(
             animation: _animationController,
