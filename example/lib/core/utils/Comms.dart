@@ -73,8 +73,8 @@ class Comms {
 
     return {
       "success": false,
-      "rsp": message,
-      "data": data,
+      "rsp": data,
+      // "data": rsp,
       "statusCode": statusCode,
     };
   }
@@ -193,54 +193,54 @@ class Comms {
   }
 }
 
-  /// POST request implementation
-  Future<Map<String, dynamic>> postRequest({
-    required String endpoint,
-    required Map<String, dynamic> data,
-    Map<String, dynamic>? queryParameters,
-    Map<String, dynamic>? headers,
-    bool isFormData = false,
-    bool? isLocal = false,
-  }) async {
-    try {
-      final String url =
-          isLocal!
-              ? "http://192.168.100.74:3000$endpoint"
-              : "$baseUrl/$endpoint";
-      print("---------------$url------------------------");
-      print("################################$data######################");
 
-      dynamic requestData = data;
-      if (isFormData) {
-        final formData = FormData();
-        data.forEach((key, value) {
-          formData.fields.add(MapEntry(key, value.toString()));
-        });
-        requestData = formData;
-      }
+Future<Map<String, dynamic>> postRequest({
+  required String endpoint,
+  required Map<String, dynamic> data,
+  Map<String, dynamic>? queryParameters,
+  Map<String, dynamic>? headers,
+  bool isFormData = false,
+}) async {
+  try {
+    final String url = "$baseUrl/$endpoint";
+    print("---------------$url------------------------");
+    print("################################$data######################");
 
-      final response = await _dio.post(
-        url,
-        data: requestData,
-        queryParameters: queryParameters,
-        options: headers != null ? Options(headers: headers) : null,
-      );
-
-      if (response.statusCode! >= 200 && response.statusCode! < 300) {
-        return {"rsp": response.data, "statusCode": response.statusCode};
-      } else {
-        return _handleErrorResponse(response);
-      }
-    } on DioException catch (e) {
-      return _handleDioException(e);
-    } catch (e) {
-      return {
-        "success": false,
-        "rsp": "An unexpected error occurred: ${e.toString()}",
-        "statusCode": null,
-      };
+    dynamic requestData = data;
+    if (isFormData) {
+      final formData = FormData();
+      data.forEach((key, value) {
+        formData.fields.add(MapEntry(key, value.toString()));
+      });
+      requestData = formData;
     }
+
+    final response = await _dio.post(
+      url,
+      data: requestData,
+      queryParameters: queryParameters,
+      options: headers != null ? Options(headers: headers) : null,
+    );
+
+    if (response.statusCode! >= 200 && response.statusCode! < 300) {
+      return {"rsp": response.data, "statusCode": response.statusCode};
+    } else {
+    
+     return {"rsp": response.data, "statusCode": response.statusCode};
+    }
+  } on DioException catch (e) {
+    return 
+    
+    _handleDioException(e);
+  } catch (e) {
+    return {
+      "success": false,
+      "rsp": {"message": "${e.toString()}"},
+      "statusCode": null,
+    };
   }
+}
+
 
   /// PUT request implementation
   Future<Map<String, dynamic>> putRequest({

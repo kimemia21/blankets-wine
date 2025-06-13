@@ -1,2 +1,3 @@
+enum users { nobody, cashier, stockist }
 
-enum users{cashier, stockist}
+users user =users.nobody;

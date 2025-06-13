@@ -23,7 +23,15 @@ class UserCashier {
       token: json['token'] ?? '',
     );
   }
-
+  factory UserCashier.empty() {
+    return UserCashier(
+      fName: '',
+      lName: '',
+      barId: 0,
+      isAdmin: false,
+      token: '',
+    );
+  }
 
   Map<String, dynamic> toJson() {
     return {
