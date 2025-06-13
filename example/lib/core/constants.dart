@@ -1,0 +1,2 @@
+
+enum users{cashier, stockist}

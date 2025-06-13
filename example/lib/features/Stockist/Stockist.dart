@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
 import 'package:blankets_and_wines_example/core/utils/ordersStatus.dart';
 import 'package:blankets_and_wines_example/data/MockData.dart';
-import 'package:blankets_and_wines_example/services/QrcodeService.dart';
+import 'package:blankets_and_wines_example/data/services/QrcodeService.dart';
 import 'package:blankets_and_wines_example/widgets/OrderCard.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';

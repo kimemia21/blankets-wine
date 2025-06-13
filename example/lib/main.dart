@@ -3,8 +3,9 @@ import 'package:blankets_and_wines_example/core/theme/theme.dart';
 import 'package:blankets_and_wines_example/core/utils/sdkinitializer.dart';
 import 'package:blankets_and_wines_example/features/Stockist/Stockist.dart';
 import 'package:blankets_and_wines_example/features/Test.dart';
-import 'package:blankets_and_wines_example/features/cashier/cashier.dart';
-import 'package:blankets_and_wines_example/services/QrcodeService.dart';
+import 'package:blankets_and_wines_example/features/cashier/Auth/Login.dart';
+import 'package:blankets_and_wines_example/features/cashier/main/CashierMain.dart';
+import 'package:blankets_and_wines_example/data/services/QrcodeService.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -33,7 +34,8 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home:  StockistMainScreen()
+      home:   CashierLoginPage()
+      // StockistMainScreen()
       // QRCodeScannerScreen(),
 
   // QRCodeScannerScreen()
