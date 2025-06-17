@@ -1,7 +1,10 @@
 import 'package:blankets_and_wines_example/core/constants.dart';
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
+import 'package:blankets_and_wines_example/core/utils/Comms.dart';
 import 'package:blankets_and_wines_example/core/utils/ToastService.dart';
 import 'package:blankets_and_wines_example/core/utils/initializers.dart';
+import 'package:blankets_and_wines_example/data/models/UserRoles.dart';
+import 'package:blankets_and_wines_example/data/services/FetchGlobals.dart';
 import 'package:blankets_and_wines_example/features/cashier/Auth/authfunc.dart';
 import 'package:blankets_and_wines_example/features/cashier/main/CashierMain.dart';
 import 'package:flutter/material.dart';
@@ -28,6 +31,7 @@ class _CashierLoginPageState extends State<CashierLoginPage>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
+
   // Static gradient colors to avoid recalculation
   static const List<Color> _gradientColors = [
     Color(0xFF6366F1), // Primary color
@@ -38,6 +42,8 @@ class _CashierLoginPageState extends State<CashierLoginPage>
   @override
   void initState() {
     super.initState();
+
+
 
     // Single controller for both animations
     _animationController = AnimationController(
@@ -72,6 +78,8 @@ class _CashierLoginPageState extends State<CashierLoginPage>
     _passwordController.dispose();
     super.dispose();
   }
+
+
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
@@ -163,7 +171,7 @@ class _CashierLoginPageState extends State<CashierLoginPage>
 
           // Title section with const text styles
           Text(
-            '${userToString(user)}', // Displaying the user type
+            '', // Displaying the user type
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,

@@ -1,12 +1,14 @@
+import 'dart:ui';
+
 import 'package:blankets_and_wines_example/core/constants.dart';
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
+import 'package:blankets_and_wines_example/core/utils/initializers.dart';
 import 'package:blankets_and_wines_example/features/cashier/models/CartItems.dart';
 import 'package:blankets_and_wines_example/features/cashier/widgets/Cartitem.dart';
 import 'package:blankets_and_wines_example/features/cashier/widgets/payments.dart';
 import 'package:flutter/material.dart';
 
-class CartPanel extends StatelessWidget {
-  final List<CartItem> cart;
+class CartPanel extends StatefulWidget {
   final double cartTotal;
   final bool isLargeScreen;
   final Function(int) onRemoveFromCart;
@@ -14,10 +16,11 @@ class CartPanel extends StatelessWidget {
   final VoidCallback onClearCart;
   final VoidCallback onShowPayment;
   final VoidCallback onCloseCart;
+    final Function( String orderId) printOrder;
 
   const CartPanel({
     Key? key,
-    required this.cart,
+
     required this.cartTotal,
     required this.isLargeScreen,
     required this.onRemoveFromCart,
@@ -25,21 +28,32 @@ class CartPanel extends StatelessWidget {
     required this.onClearCart,
     required this.onShowPayment,
     required this.onCloseCart,
+    required this.printOrder
   }) : super(key: key);
 
-  // Calculate the correct total from cart items
+  @override
+  State<CartPanel> createState() => _CartPanelState();
+}
+
+class _CartPanelState extends State<CartPanel> {
+  bool isLoading = false;
+  String Ordernumber = "";
+
   double get _calculatedTotal {
-    return cart.fold(0.0, (sum, item) => sum + item.totalPrice);
+    return cartG.total;
   }
 
-  void _showPaymentOptions(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
+ void _showPaymentOptions(BuildContext context) {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (BuildContext context) {
+      return BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
+        child: AlertDialog(
           title: Text(
             'Select Payment Method',
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -47,12 +61,24 @@ class CartPanel extends StatelessWidget {
             ),
           ),
           content: Container(
-            width: MediaQuery.of(context).size.width*0.55,
+            width: MediaQuery.of(context).size.width * 0.55,
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
                   'Total Amount: KSHS ${formatWithCommas(_calculatedTotal.toStringAsFixed(0))}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: BarPOSTheme.successColor,
+                  ),
+                ),
+                SizedBox(height: 20),
+                 Text(
+                  'ORDER NUMBER:$Ordernumber',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -66,16 +92,16 @@ class CartPanel extends StatelessWidget {
                   Icons.phone_android,
                   Colors.green,
                   () => _handleMpesaPayment(context),
-                ),
+                widget.printOrder),
                 SizedBox(height: 12),
-                _buildPaymentOption(
-                  context,
-                  'Card Payment',
-                  Icons.credit_card,
-                  Colors.blue,
-                  () =>{},
-                  //  _handleCardPayment(context),
-                ),
+                // _buildPaymentOption(
+                //   context,
+                //   'Card Payment',
+                //   Icons.credit_card,
+                //   Colors.blue,
+                //   () => {},
+                //   //  _handleCardPayment(context),
+                // ),
                 // SizedBox(height: 12),
                 // _buildPaymentOption(
                 //   context,
@@ -92,17 +118,15 @@ class CartPanel extends StatelessWidget {
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
                 'Cancel',
-                style: TextStyle(
-                  color: BarPOSTheme.errorColor,
-                  fontSize: 16,
-                ),
+                style: TextStyle(color: BarPOSTheme.errorColor, fontSize: 16),
               ),
             ),
           ],
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildPaymentOption(
     BuildContext context,
@@ -110,6 +134,7 @@ class CartPanel extends StatelessWidget {
     IconData icon,
     Color color,
     VoidCallback onTap,
+   Function( String orderId) printOrder,
   ) {
     return InkWell(
       onTap: onTap,
@@ -134,11 +159,7 @@ class CartPanel extends StatelessWidget {
               ),
             ),
             Spacer(),
-            Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.grey[600],
-              size: 16,
-            ),
+            Icon(Icons.arrow_forward_ios, color: Colors.grey[600], size: 16),
           ],
         ),
       ),
@@ -146,57 +167,37 @@ class CartPanel extends StatelessWidget {
   }
 
   void _handleMpesaPayment(BuildContext context) {
-    Navigator.of(context).pop(); // Close payment options dialog
-    
+
+    final printOrderFunction = widget.printOrder;
+    Navigator.of(context).pop(); 
+
     // Show M-Pesa payment dialog
     Payments.showMpesaPayment(
       context: context,
       amount: _calculatedTotal,
+      orderId: Ordernumber,
+      printOrder:printOrderFunction,
+
+      
       onPaymentComplete: (bool success, String? transactionId) {
         if (success) {
           _showPaymentSuccess(context, 'M-Pesa', transactionId);
         } else {
-          _showPaymentError(context, 'M-Pesa payment failed. Please try again.');
+          _showPaymentError(
+            context,
+            'M-Pesa payment failed. Please try again.',
+          );
         }
       },
     );
   }
 
-  void _handleCardPayment(BuildContext context) {
-    Navigator.of(context).pop(); // Close payment options dialog
-    
-    // Show Card payment dialog
-    Payments.showCardPayment(
-      context: context,
-      amount: _calculatedTotal,
-      onPaymentComplete: (bool success, String? transactionId) {
-        if (success) {
-          _showPaymentSuccess(context, 'Card', transactionId);
-        } else {
-          _showPaymentError(context, 'Card payment failed. Please try again.');
-        }
-      },
-    );
-  }
-
-  // void _handleCashPayment(BuildContext context) {
-  //   Navigator.of(context).pop(); // Close payment options dialog
-    
-  //   // Show Cash payment dialog
-  //   Payments.showCashPayment(
-  //     context: context,
-  //     amount: _calculatedTotal,
-  //     onPaymentComplete: (bool success, String? transactionId) {
-  //       if (success) {
-  //         _showPaymentSuccess(context, 'Cash', transactionId);
-  //       } else {
-  //         _showPaymentError(context, 'Cash payment cancelled.');
-  //       }
-  //     },
-  //   );
-  // }
-
-  void _showPaymentSuccess(BuildContext context, String paymentMethod, String? transactionId) {
+  // void _handleCardPayment(BuildContext context) {
+  void _showPaymentSuccess(
+    BuildContext context,
+    String paymentMethod,
+    String? transactionId,
+  ) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -204,7 +205,11 @@ class CartPanel extends StatelessWidget {
         return AlertDialog(
           title: Row(
             children: [
-              Icon(Icons.check_circle, color: BarPOSTheme.successColor, size: 28),
+              Icon(
+                Icons.check_circle,
+                color: BarPOSTheme.successColor,
+                size: 28,
+              ),
               SizedBox(width: 12),
               Text('Payment Successful!'),
             ],
@@ -214,7 +219,9 @@ class CartPanel extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Payment Method: $paymentMethod'),
-              Text('Amount: KSHS ${formatWithCommas(_calculatedTotal.toStringAsFixed(0))}'),
+              Text(
+                'Amount: KSHS ${formatWithCommas(_calculatedTotal.toStringAsFixed(0))}',
+              ),
               if (transactionId != null) Text('Transaction ID: $transactionId'),
             ],
           ),
@@ -222,7 +229,7 @@ class CartPanel extends StatelessWidget {
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop(); // Close success dialog
-                onClearCart(); // Clear the cart
+                widget.onClearCart(); // Clear the cart
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: BarPOSTheme.successColor,
@@ -259,6 +266,31 @@ class CartPanel extends StatelessWidget {
     );
   }
 
+  void createOrder() async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
+      final response = await comms.postRequest(
+        endpoint: "orders",
+        data: cartG.toOrderFormat(),
+      );
+      if (response["rsp"]["success"]) {
+        setState(() {
+          isLoading = false;
+          Ordernumber = response["rsp"]["data"]["orderNo"];
+        });
+
+        _showPaymentOptions(context);
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      print('Error creating order: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -277,18 +309,18 @@ class CartPanel extends StatelessWidget {
                 ),
                 Row(
                   children: [
-                    if (cart.isNotEmpty)
+                    if (cartG.items.isNotEmpty)
                       IconButton(
-                        onPressed: onClearCart,
+                        onPressed: widget.onClearCart,
                         icon: Icon(
                           Icons.clear_all,
                           color: BarPOSTheme.errorColor,
                           size: 28,
                         ),
                       ),
-                    if (!isLargeScreen)
+                    if (!widget.isLargeScreen)
                       IconButton(
-                        onPressed: onCloseCart,
+                        onPressed: widget.onCloseCart,
                         icon: Icon(Icons.close, size: 28),
                       ),
                   ],
@@ -299,13 +331,14 @@ class CartPanel extends StatelessWidget {
 
           // Cart Items
           Expanded(
-            child: cart.isEmpty
-                ? _buildEmptyCart(context)
-                : _buildCartItems(),
+            child:
+                cartG.items.isEmpty
+                    ? _buildEmptyCart(context)
+                    : _buildCartItems(),
           ),
 
           // Total and Checkout
-          if (cart.isNotEmpty) _buildCheckoutSection(context),
+          if (cartG.items.isNotEmpty) _buildCheckoutSection(context),
         ],
       ),
     );
@@ -324,10 +357,9 @@ class CartPanel extends StatelessWidget {
           SizedBox(height: BarPOSTheme.spacingM),
           Text(
             'No items in cart',
-            style: Theme.of(context)
-                .textTheme
-                .bodyLarge
-                ?.copyWith(color: BarPOSTheme.secondaryText),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: BarPOSTheme.secondaryText),
           ),
         ],
       ),
@@ -337,14 +369,14 @@ class CartPanel extends StatelessWidget {
   Widget _buildCartItems() {
     return ListView.builder(
       padding: EdgeInsets.symmetric(horizontal: BarPOSTheme.spacingL),
-      itemCount: cart.length,
+      itemCount: cartG.items.length,
       itemBuilder: (context, index) {
-        final item = cart[index];
+        final item = cartG.items[index];
         return CartItemTile(
           cartItem: item,
-          onRemove: () => onRemoveFromCart(item.drink.id),
-          onUpdateQuantity: (quantity) => 
-              onUpdateQuantity(item.drink.id, quantity),
+          onRemove: () => widget.onRemoveFromCart(item.drink.id),
+          onUpdateQuantity:
+              (quantity) => widget.onUpdateQuantity(item.drink.id, quantity),
         );
       },
     );
@@ -354,42 +386,41 @@ class CartPanel extends StatelessWidget {
     return Container(
       padding: BarPOSTheme.cardPaddingLarge,
       decoration: BoxDecoration(
-        color: BarPOSTheme.buttonColor,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(BarPOSTheme.radiusLarge),
-          topRight: Radius.circular(BarPOSTheme.radiusLarge),
-        ),
+      color: BarPOSTheme.buttonColor,
+      borderRadius: BorderRadius.only(
+        topLeft: Radius.circular(BarPOSTheme.radiusLarge),
+        topRight: Radius.circular(BarPOSTheme.radiusLarge),
+      ),
       ),
       child: Column(
+      children: [
+        Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Total:',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              Text(
-                'KSHS ${formatWithCommas(_calculatedTotal.toStringAsFixed(0))}',
-                style: BarPOSTheme.totalPriceTextStyle,
-              ),
-            ],
-          ),
-          SizedBox(height: BarPOSTheme.spacingL),
-          SizedBox(
-            width: double.infinity,
-            height: BarPOSTheme.buttonHeight,
-            child: ElevatedButton(
-              onPressed: () => _showPaymentOptions(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: BarPOSTheme.successColor,
-                foregroundColor: BarPOSTheme.primaryText,
-              ),
-              child: Text('Confirm Payment'),
-            ),
+          Text('Total:', style: Theme.of(context).textTheme.headlineSmall),
+          Text(
+          'KSHS ${formatWithCommas(_calculatedTotal.toStringAsFixed(0))}',
+          style: BarPOSTheme.totalPriceTextStyle,
           ),
         ],
+        ),
+        SizedBox(height: BarPOSTheme.spacingL),
+        SizedBox(
+        width: double.infinity,
+        height: BarPOSTheme.buttonHeight,
+        child: ElevatedButton(
+          onPressed: isLoading ? null : () => createOrder(),
+          style: ElevatedButton.styleFrom(
+          backgroundColor: BarPOSTheme.successColor,
+          foregroundColor: BarPOSTheme.primaryText,
+          ),
+          child: isLoading 
+          ? CircularProgressIndicator(color: BarPOSTheme.primaryText)
+          : Text('Create Order'),
+        ),
+        ),
+      ],
       ),
     );
-  }
+    }
 }

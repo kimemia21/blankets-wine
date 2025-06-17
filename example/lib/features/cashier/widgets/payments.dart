@@ -1,14 +1,22 @@
+import 'dart:ui';
+
+import 'package:blankets_and_wines/blankets_and_wines.dart';
 import 'package:blankets_and_wines_example/core/constants.dart';
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
+import 'package:blankets_and_wines_example/core/utils/initializers.dart';
+import 'package:blankets_and_wines_example/features/cashier/functions/fetchDrinks.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 
 class Payments {
   // M-Pesa Payment Method
   static void showMpesaPayment({
     required BuildContext context,
     required double amount,
+    required String orderId,
     required Function(bool success, String? transactionId) onPaymentComplete,
+    required Function(String orderId) printOrder,
   }) {
     final TextEditingController phoneController = TextEditingController();
     final GlobalKey<FormState> formKey = GlobalKey<FormState>();
@@ -17,121 +25,118 @@ class Payments {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Row(
-            children: [
-              Icon(Icons.phone_android, color: Colors.green, size: 28),
-              SizedBox(width: 12),
-              Text('M-Pesa Payment'),
-            ],
-          ),
-          content: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
+          child: AlertDialog(
+            title: Row(
               children: [
-                Text(
-                  'Amount to Pay: KSHS ${formatWithCommas(amount.toStringAsFixed(0))}',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: BarPOSTheme.successColor,
-                  ),
-                ),
-                SizedBox(height: 20),
-                Text(
-                  'Enter Phone Number:',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                SizedBox(height: 8),
-                TextFormField(
-                  controller: phoneController,
-                  keyboardType: TextInputType.phone,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(10),
-                  ],
-                  decoration: InputDecoration(
-                    hintText: '0712345678',
-                    prefixText: '+254 ',
-                    prefixStyle: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.green, width: 2),
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter phone number';
-                    }
-                    if (value.length < 9) {
-                      return 'Please enter a valid phone number';
-                    }
-                    if (!value.startsWith('07') && !value.startsWith('01')) {
-                      return 'Phone number must start with 07 or 01';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 16),
-                Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.green.withOpacity(0.3)),
-                  ),
-                  child: Text(
-                    'You will receive an M-Pesa prompt on your phone. Enter your M-Pesa PIN to complete the transaction.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.green[700],
-                    ),
-                  ),
-                ),
+                Icon(Icons.phone_android, color: Colors.green, size: 28),
+                SizedBox(width: 12),
+                Text('M-Pesa Payment'),
               ],
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                onPaymentComplete(false, null);
-              },
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: BarPOSTheme.errorColor),
+            content: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Amount to Pay: KSHS ${formatWithCommas(amount.toStringAsFixed(0))}',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: BarPOSTheme.successColor,
+                    ),
+                  ),
+                  SizedBox(height: 20),
+                  Text(
+                    'Enter Phone Number:',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
+                  SizedBox(height: 8),
+                  TextFormField(
+                    controller: phoneController,
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(10),
+                    ],
+                    decoration: InputDecoration(
+                      prefixStyle: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.green, width: 2),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter phone number';
+                      }
+                      if (value.length < 9) {
+                        return 'Please enter a valid phone number';
+                      }
+                      if (!value.startsWith('07') && !value.startsWith('01')) {
+                        return 'Phone number must start with 07 or 01';
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: 16),
+                  Container(
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.green.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      'You will receive an M-Pesa prompt on your phone. Enter your M-Pesa PIN to complete the transaction.',
+                      style: TextStyle(fontSize: 14, color: Colors.green[700]),
+                    ),
+                  ),
+                ],
               ),
             ),
-            ElevatedButton(
-              onPressed: () {
-                if (formKey.currentState!.validate()) {
+            actions: [
+              TextButton(
+                onPressed: () {
                   Navigator.of(context).pop();
-                  _processMpesaPayment(
-                    context: context,
-                    phoneNumber: '+254${phoneController.text}',
-                    amount: amount,
-                    onPaymentComplete: onPaymentComplete,
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
+                  onPaymentComplete(false, null);
+                },
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(color: BarPOSTheme.errorColor),
+                ),
               ),
-              child: Text('Send Payment Request'),
-            ),
-          ],
+              ElevatedButton(
+                onPressed: () {
+                  if (formKey.currentState!.validate()) {
+                    Navigator.of(context).pop();
+                    _processMpesaPayment(
+                      context: context,
+                      phoneNumber: '${phoneController.text}',
+                      amount: amount,
+                      orderId: orderId,
+                      onPaymentComplete: onPaymentComplete,
+                      printOrder: printOrder,
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                ),
+                child: Text('Send Payment Request'),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -189,7 +194,9 @@ class Payments {
                     ],
                     decoration: InputDecoration(
                       hintText: '1234 5678 9012 3456',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -221,7 +228,9 @@ class Payments {
                               ],
                               decoration: InputDecoration(
                                 hintText: 'MM/YY',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
@@ -250,7 +259,9 @@ class Payments {
                               ],
                               decoration: InputDecoration(
                                 hintText: '123',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
@@ -317,7 +328,8 @@ class Payments {
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (context, setState) {
-            double receivedAmount = double.tryParse(receivedController.text) ?? 0;
+            double receivedAmount =
+                double.tryParse(receivedController.text) ?? 0;
             double change = receivedAmount - amount;
 
             return AlertDialog(
@@ -347,11 +359,15 @@ class Payments {
                     SizedBox(height: 8),
                     TextFormField(
                       controller: receivedController,
-                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: InputDecoration(
                         hintText: '0.00',
                         prefixText: 'KSHS ',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       onChanged: (value) {
                         setState(() {});
@@ -372,10 +388,16 @@ class Payments {
                       Container(
                         padding: EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: change >= 0 ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                          color:
+                              change >= 0
+                                  ? Colors.green.withOpacity(0.1)
+                                  : Colors.red.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: change >= 0 ? Colors.green.withOpacity(0.3) : Colors.red.withOpacity(0.3),
+                            color:
+                                change >= 0
+                                    ? Colors.green.withOpacity(0.3)
+                                    : Colors.red.withOpacity(0.3),
                           ),
                         ),
                         child: Row(
@@ -393,7 +415,10 @@ class Payments {
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: change >= 0 ? Colors.green[700] : Colors.red[700],
+                                color:
+                                    change >= 0
+                                        ? Colors.green[700]
+                                        : Colors.red[700],
                               ),
                             ),
                           ],
@@ -418,7 +443,10 @@ class Payments {
                   onPressed: () {
                     if (formKey.currentState!.validate()) {
                       Navigator.of(context).pop();
-                      onPaymentComplete(true, 'CASH_${DateTime.now().millisecondsSinceEpoch}');
+                      onPaymentComplete(
+                        true,
+                        'CASH_${DateTime.now().millisecondsSinceEpoch}',
+                      );
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -435,18 +463,59 @@ class Payments {
     );
   }
 
-  // Private method to process M-Pesa payment
+  static processPayment(String orderNumber) async {
+    print("Processing sale with order number: $orderNumber");
+
+
+    try {
+      double subtotal = cartG.total;
+
+      double tax = cartG.total - subtotal;
+
+      await SmartposPlugin.printReceipt({
+        "storeName": "Blankets Bar",
+        "date": DateFormat('yyyy-MM-dd').format(DateTime.now()),
+        "time": DateFormat('HH:mm:ss').format(DateTime.now()),
+        "orderNumber": orderNumber,
+        "items":
+            cartG.items
+                .map(
+                  (item) => {
+                    "name": item.drink.name,
+                    "quantity": item.quantity,
+                    "price": item.totalPrice.toStringAsFixed(2),
+                  },
+                )
+                .toList(),
+        "subtotal": subtotal.toStringAsFixed(2),
+        "tax": tax.toStringAsFixed(2),
+        "total": cartG.total.toStringAsFixed(2),
+        "paymentMethod": "Mpesa",
+      });
+    } catch (e) {
+      print("Error printing receipt: $e");
+    }
+    cartG.items.clear();
+  }
+
   static void _processMpesaPayment({
     required BuildContext context,
     required String phoneNumber,
     required double amount,
+    required String orderId,
     required Function(bool success, String? transactionId) onPaymentComplete,
-  }) {
+    required Function(String orderId) printOrder,
+  }) async {
+    // Store context related values
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    var dialogContext;
+
     // Show processing dialog
-    showDialog(
+    await showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: true,
       builder: (BuildContext context) {
+        dialogContext = context;
         return AlertDialog(
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -466,16 +535,37 @@ class Payments {
       },
     );
 
-    // Simulate M-Pesa processing
-    Future.delayed(Duration(seconds: 3), () {
-      Navigator.of(context).pop(); // Close processing dialog
+    try {
+      // Call the actual M-Pesa payment API
+      await CashierFunctions.payOrder({
+        "orderNo": orderId,
+        "mpesaNo": phoneNumber,
+        "amount": amount.toString(),
+      }).then((p0){
+        processPayment(orderId);
+       Navigator.of(dialogContext).pop();
+
+      });
+
+
       
-      // Simulate success/failure (90% success rate)
-      bool success = DateTime.now().millisecond % 10 != 0;
-      String? transactionId = success ? 'MP${DateTime.now().millisecondsSinceEpoch}' : null;
-      
-      onPaymentComplete(success, transactionId);
-    });
+
+      // Close dialog safely
+    } catch (error) {
+      //  processPayment(orderId);
+       
+      // Close dialog safely
+      // if (dialogContext != null) {
+      //   Navigator.of(dialogContext).pop();
+      // }
+
+      // // Show error message
+      // scaffoldMessenger.showSnackBar(
+      //   SnackBar(content: Text('Payment failed: ${error.toString()}')),
+      // );
+
+      // onPaymentComplete(false, null);
+    }
   }
 
   // Private method to process Card payment
@@ -505,11 +595,12 @@ class Payments {
     // Simulate card processing
     Future.delayed(Duration(seconds: 2), () {
       Navigator.of(context).pop(); // Close processing dialog
-      
+
       // Simulate success/failure (95% success rate)
       bool success = DateTime.now().millisecond % 20 != 0;
-      String? transactionId = success ? 'CARD_${DateTime.now().millisecondsSinceEpoch}' : null;
-      
+      String? transactionId =
+          success ? 'CARD_${DateTime.now().millisecondsSinceEpoch}' : null;
+
       onPaymentComplete(success, transactionId);
     });
   }
@@ -524,14 +615,14 @@ class _CardNumberFormatter extends TextInputFormatter {
   ) {
     final text = newValue.text.replaceAll(' ', '');
     final buffer = StringBuffer();
-    
+
     for (int i = 0; i < text.length; i++) {
       if (i > 0 && i % 4 == 0) {
         buffer.write(' ');
       }
       buffer.write(text[i]);
     }
-    
+
     return TextEditingValue(
       text: buffer.toString(),
       selection: TextSelection.collapsed(offset: buffer.length),
@@ -548,14 +639,14 @@ class _ExpiryDateFormatter extends TextInputFormatter {
   ) {
     final text = newValue.text.replaceAll('/', '');
     final buffer = StringBuffer();
-    
+
     for (int i = 0; i < text.length; i++) {
       if (i == 2) {
         buffer.write('/');
       }
       buffer.write(text[i]);
     }
-    
+
     return TextEditingValue(
       text: buffer.toString(),
       selection: TextSelection.collapsed(offset: buffer.length),

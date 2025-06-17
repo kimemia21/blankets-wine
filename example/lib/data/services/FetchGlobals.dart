@@ -1,3 +1,4 @@
+import 'package:blankets_and_wines_example/core/utils/ToastService.dart';
 import 'package:flutter/material.dart';
 
 Future<List<T>> fetchGlobal<T>({
@@ -9,11 +10,12 @@ Future<List<T>> fetchGlobal<T>({
     final response = await getRequests(endpoint);
 
     if (response["success"]) {
-
       List data = response["rsp"]["data"];
       print(response);
       return data.map((item) => fromJson(item)).toList();
     } else {
+      ToastService.showError(response["rsp"]);
+
       debugPrint("Error fetching data: ${response["rsp"]}");
       return [];
     }

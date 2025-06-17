@@ -20,6 +20,8 @@ class Cashier extends StatefulWidget {
 class _CashierState extends State<Cashier> {
   late Future<List<DrinkItem>> drinks;
   List<CartItem> cart = [];
+ 
+ 
   String selectedCategory = 'All';
   String searchQuery = '';
   TextEditingController searchController = TextEditingController();
@@ -40,6 +42,8 @@ class _CashierState extends State<Cashier> {
         cart[existingItemIndex].quantity++;
       } else {
         cart.add(CartItem(drink: drink));
+        cartG.items = cart;
+        print(cartG.toOrderFormat());
       }
     });
   }
@@ -48,6 +52,7 @@ class _CashierState extends State<Cashier> {
     debugPrint("Removed item $drinkId");
     setState(() {
       cart.removeWhere((item) => item.drink.id == drinkId);
+      cartG.items = cart;
     });
   }
 
@@ -55,9 +60,11 @@ class _CashierState extends State<Cashier> {
     setState(() {
       if (newQuantity <= 0) {
         removeFromCart(drinkId);
+        cartG.items = cart;
       } else {
         final item = cart.firstWhere((item) => item.drink.id == drinkId);
         item.quantity = newQuantity;
+        cartG.items = cart;
       }
     });
   }
@@ -65,28 +72,18 @@ class _CashierState extends State<Cashier> {
   void clearCart() {
     setState(() {
       cart.clear();
+      cartG.items = cart;
     });
   }
+
 
   bool isLargeScreen(BuildContext context) {
     return MediaQuery.of(context).size.width > 768;
   }
 
-  // void _showPaymentDialog() {
-  //   showDialog(
-  //     context: context,
-  //     builder: (BuildContext context) {
-  //       return PaymentDialog(
-  //         cartTotal: cartTotal,
-  //         onConfirmPayment: _processPayment,
-  //       );
-  //     },
-  //   );
-  // }
 
-  void _processPayment() async {
-    String orderNumber =
-        "ORD-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}";
+  void processPayment( String orderNumber) async {
+   
 
     print("Processing sale with order number: $orderNumber");
 
@@ -148,6 +145,8 @@ class _CashierState extends State<Cashier> {
       });
     }
   }
+
+
 
   @override
   void initState() {
@@ -295,16 +294,19 @@ class _CashierState extends State<Cashier> {
           searchController: searchController,
           cart: cart,
           onCategoryChanged: (category) {
-            setState(() {
-              selectedCategory = category;
-            });
+            // setState(() {
+
+            //   selectedCategory = category;
+            // });
           },
+
           onSearchChanged: (query) {
             setState(() {
               searchQuery = query;
             });
           },
           onAddToCart: addToCart,
+          printOrder: processPayment,
         ),
         if (isCartVisible)
           Positioned.fill(
@@ -323,7 +325,7 @@ class _CashierState extends State<Cashier> {
                     child: Container(
                       width: MediaQuery.of(context).size.width * 0.85,
                       child: CartPanel(
-                        cart: cart,
+                       printOrder:processPayment ,
                         cartTotal: cartTotal,
                         isLargeScreen: false,
                         onRemoveFromCart: removeFromCart,

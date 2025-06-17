@@ -44,6 +44,7 @@ class _CartItemTileState extends State<CartItemTile> {
   }
 
   void _startEditing() {
+    
     setState(() {
       _isEditing = true;
       _quantityController.text = widget.cartItem.quantity.toString();
@@ -206,6 +207,13 @@ class _CartItemTileState extends State<CartItemTile> {
                             onSubmitted: (_) => _finishEditing(),
                             // Handle individual text changes if needed
                             onChanged: (value) {
+                              // Only allow numbers and validate
+                              if (value.isNotEmpty && !RegExp(r'^[0-9]+$').hasMatch(value)) {
+                                _quantityController.text = value.replaceAll(RegExp(r'[^0-9]'), '');
+                                _quantityController.selection = TextSelection.fromPosition(
+                                  TextPosition(offset: _quantityController.text.length),
+                                );
+                              }
                               // Optional: Handle real-time validation here
                             },
                           )
@@ -276,7 +284,7 @@ class _CartItemTileState extends State<CartItemTile> {
                       // Stop editing if active, then remove item
                       if (_isEditing) _finishEditing();
                       widget.onRemove();
-                      
+
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,

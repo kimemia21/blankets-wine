@@ -1,8 +1,10 @@
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
+import 'package:blankets_and_wines_example/data/models/Category.dart';
 import 'package:blankets_and_wines_example/data/models/DrinkItem.dart';
 import 'package:blankets_and_wines_example/features/cashier/functions/fetchDrinks.dart';
 import 'package:blankets_and_wines_example/features/cashier/models/CartItems.dart';
 import 'package:blankets_and_wines_example/features/cashier/widgets/DrinkItemCard.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class MenuPanel extends StatelessWidget {
@@ -14,6 +16,7 @@ class MenuPanel extends StatelessWidget {
   final Function(String) onCategoryChanged;
   final Function(String) onSearchChanged;
   final Function(DrinkItem) onAddToCart;
+  final Function( String orderId) printOrder;
 
   const MenuPanel({
     Key? key,
@@ -25,6 +28,7 @@ class MenuPanel extends StatelessWidget {
     required this.onCategoryChanged,
     required this.onSearchChanged,
     required this.onAddToCart,
+    required this.printOrder,
   }) : super(key: key);
 
   int getGridCount(BuildContext context) {
@@ -59,25 +63,61 @@ class MenuPanel extends StatelessWidget {
           Container(
             height: BarPOSTheme.buttonHeight,
             margin: EdgeInsets.only(bottom: BarPOSTheme.spacingL),
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: CashierFunctions.categories.length,
-              itemBuilder: (context, index) {
-                final category = CashierFunctions.categories[index];
-                final isSelected = selectedCategory == category;
-                return Container(
-                  margin: EdgeInsets.only(right: BarPOSTheme.spacingS),
-                  child: ElevatedButton(
-                    onPressed: () => onCategoryChanged(category),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isSelected 
-                          ? BarPOSTheme.buttonColor 
-                          : BarPOSTheme.accentDark,
-                      foregroundColor: BarPOSTheme.primaryText,
-                      textStyle: BarPOSTheme.categoryTextStyle,
+            child: FutureBuilder<List<DrinnksCategory>>(
+              future: CashierFunctions.fetchCategories(
+                'ecom/categories',
+              ), // Replace with your actual endpoint
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(
+                    child: CircularProgressIndicator(
+                      color: BarPOSTheme.buttonColor,
                     ),
-                    child: Text(category),
-                  ),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text(
+                      'Error loading categories',
+                      style: TextStyle(color: BarPOSTheme.errorColor),
+                    ),
+                  );
+                }
+
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(
+                    child: Text(
+                      'No categories available',
+                      style: BarPOSTheme.categoryTextStyle,
+                    ),
+                  );
+                }
+
+                final categories = snapshot.data!;
+
+                return ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: categories.length,
+                  itemBuilder: (context, index) {
+                    final category = categories[index];
+                    final isSelected = selectedCategory == category.name;
+                    return Container(
+                      margin: EdgeInsets.only(right: BarPOSTheme.spacingS),
+                      child: ElevatedButton(
+                        onPressed: () => onCategoryChanged(category.name),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              isSelected
+                                  ? BarPOSTheme.buttonColor
+                                  : BarPOSTheme.accentDark,
+                          foregroundColor: BarPOSTheme.primaryText,
+                          textStyle: BarPOSTheme.categoryTextStyle,
+                        ),
+                        child: Text(category.name),
+                      ),
+                    );
+                  },
                 );
               },
             ),
@@ -132,13 +172,16 @@ class MenuPanel extends StatelessWidget {
                   );
                 }
 
-                final filteredDrinksList = snapshot.data!.where((drink) {
-                  bool categoryMatch = selectedCategory == 'All' || 
-                      drink.categoryId == selectedCategory;
-                  bool searchMatch = drink.name.toLowerCase()
-                      .contains(searchQuery.toLowerCase());
-                  return categoryMatch && searchMatch;
-                }).toList();
+                final filteredDrinksList =
+                    snapshot.data!.where((drink) {
+                      bool categoryMatch =
+                          selectedCategory == 'All' ||
+                          drink.categoryId == selectedCategory;
+                      bool searchMatch = drink.name.toLowerCase().contains(
+                        searchQuery.toLowerCase(),
+                      );
+                      return categoryMatch && searchMatch;
+                    }).toList();
 
                 return GridView.builder(
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
