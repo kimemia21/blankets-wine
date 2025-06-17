@@ -36,6 +36,7 @@ class UserPreferencesManager {
   static const String _keyUserRole = 'user_role';
   static const String _keyUsername = 'username';
   static const String _keyPassword = 'password';
+  static const String _keyPhoneNumber = 'phone_number';
   static const String _keyIsLoggedIn = 'is_logged_in';
 
   // Save user data
@@ -43,6 +44,7 @@ class UserPreferencesManager {
     required String userRole,
     required String username,
     required String password,
+    String? phoneNumber,
   }) async {
     try {
       final prefs = await _prefs;
@@ -50,6 +52,9 @@ class UserPreferencesManager {
       await prefs.setString(_keyUserRole, userRole);
       await prefs.setString(_keyUsername, username);
       await prefs.setString(_keyPassword, password);
+      if (phoneNumber != null) {
+        await prefs.setString(_keyPhoneNumber, phoneNumber);
+      }
       await prefs.setBool(_keyIsLoggedIn, true);
       
       return true;
@@ -92,6 +97,17 @@ class UserPreferencesManager {
     }
   }
 
+  // Get phone number
+  Future<String?> getPhoneNumber() async {
+    try {
+      final prefs = await _prefs;
+      return prefs.getString(_keyPhoneNumber);
+    } catch (e) {
+      print('Error getting phone number: $e');
+      return null;
+    }
+  }
+
   // Get all user data at once
   Future<UserData?> getUserData() async {
     try {
@@ -100,6 +116,7 @@ class UserPreferencesManager {
       final userRole = prefs.getString(_keyUserRole);
       final username = prefs.getString(_keyUsername);
       final password = prefs.getString(_keyPassword);
+      final phoneNumber = prefs.getString(_keyPhoneNumber);
       final isLoggedIn = prefs.getBool(_keyIsLoggedIn) ?? false;
 
       if (userRole != null && username != null && password != null) {
@@ -107,6 +124,7 @@ class UserPreferencesManager {
           userRole: userRole,
           username: username,
           password: password,
+          phoneNumber: phoneNumber!,
           isLoggedIn: isLoggedIn,
         );
       }
@@ -161,6 +179,17 @@ class UserPreferencesManager {
     }
   }
 
+  // Update phone number
+  Future<bool> updatePhoneNumber(String newPhoneNumber) async {
+    try {
+      final prefs = await _prefs;
+      return await prefs.setString(_keyPhoneNumber, newPhoneNumber);
+    } catch (e) {
+      print('Error updating phone number: $e');
+      return false;
+    }
+  }
+
   // Clear all user data (logout)
   Future<bool> clearUserData() async {
     try {
@@ -169,6 +198,7 @@ class UserPreferencesManager {
       await prefs.remove(_keyUserRole);
       await prefs.remove(_keyUsername);
       await prefs.remove(_keyPassword);
+      await prefs.remove(_keyPhoneNumber);
       await prefs.setBool(_keyIsLoggedIn, false);
       
       return true;
@@ -199,6 +229,7 @@ class AuthenticationService {
     required String userRole,
     required String username,
     required String password,
+    String? phoneNumber,
   }) async {
     // Here you would typically validate credentials with your backend
     // For now, we'll just save them
@@ -207,6 +238,7 @@ class AuthenticationService {
       userRole: userRole,
       username: username,
       password: password,
+      phoneNumber: phoneNumber,
     );
     
     return success;

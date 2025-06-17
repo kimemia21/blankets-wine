@@ -25,6 +25,9 @@ Future<bool> isLoggedin() async {
     bool result = await preferences.isUserLoggedIn();
     if (result) {
       userData = (await preferences.getUserData())!;
+      print(
+        "##############################${userData.userRole}######################################",
+      );
     }
 
     return result;
@@ -58,16 +61,15 @@ class _MyAppState extends State<MyApp> {
             // Check user type from userData instance
             switch (userData.userRole) {
               case 'cashier':
-          return CashierLoginPage();
+                return CashierLoginPage();
               // Add other user type cases here
               default:
-          return CashierLoginPage(); // Default fallback
+                return CashierLoginPage(); // Default fallback
             }
           }
-          
+
           return OnboardingPage();
-        }
-        
+        },
       ),
       navigatorKey: ToastService.navigatorKey,
       // StockistMainScreen()

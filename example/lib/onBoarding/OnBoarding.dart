@@ -88,7 +88,7 @@ class _OnboardingPageState extends State<OnboardingPage>
       );
     } catch (e) {
       ToastService.showError("$e");
-      
+
       print('Error loading user roles: $e');
       // Provide fallback data if API fails
       // _cachedRoles = _getFallbackRoles();
@@ -162,6 +162,7 @@ class _OnboardingPageState extends State<OnboardingPage>
       // Navigate based on user type
       final users selectedRole = stringToUser(userType);
       await preferences.updateUserRole(userType);
+      userData.copyWith(userRole:userType);
       if (selectedRole == users.cashier) {
         if (mounted) {
           Navigator.push(

@@ -26,28 +26,27 @@ class _CashierLoginPageState extends State<CashierLoginPage>
   bool _isPasswordVisible = false;
   bool _isLoading = false;
 
+  // User data from preferences
+  String? _userName;
+  String? _userEmail;
+  String? _userPhone;
+  String? _userDepartment;
+  String? _lastLogin;
+  bool _isReturningUser = false;
+
   // Single animation controller instead of multiple
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-
-  // Static gradient colors to avoid recalculation
-  static const List<Color> _gradientColors = [
-    Color(0xFF6366F1), // Primary color
-    Color(0xFF8B5CF6), // Secondary color
-    Color(0xFFA855F7), // Tertiary color
-  ];
-
   @override
   void initState() {
     super.initState();
-
-
+    _loadUserData();
 
     // Single controller for both animations
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 600), // Reduced duration
+      duration: const Duration(milliseconds: 600),
       vsync: this,
     );
 
@@ -59,7 +58,7 @@ class _CashierLoginPageState extends State<CashierLoginPage>
     );
 
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.1), // Reduced movement
+      begin: const Offset(0, 0.1),
       end: Offset.zero,
     ).animate(
       CurvedAnimation(
@@ -79,7 +78,27 @@ class _CashierLoginPageState extends State<CashierLoginPage>
     super.dispose();
   }
 
-
+  // Load user data from preferences
+  Future<void> _loadUserData() async {
+    try {
+      _userName = userData.username;
+      _userEmail = userData.username;
+    
+      _userPhone = userData.phoneNumber;
+      // Check if user has logged in before
+      if (_userName != null && _userName!.isNotEmpty) {
+        setState(() {
+          _isReturningUser = true;
+          // Pre-fill phone number if available
+          if (_userPhone != null) {
+            _phoneNumberController.text = _userPhone!;
+          }
+        });
+      }
+    } catch (e) {
+      print("Error loading user data: $e");
+    }
+  }
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
@@ -100,7 +119,6 @@ class _CashierLoginPageState extends State<CashierLoginPage>
         );
       } else {
         setState(() => _isLoading = false);
-
         print("Failed");
       }
     } finally {
@@ -114,6 +132,25 @@ class _CashierLoginPageState extends State<CashierLoginPage>
     setState(() => _isPasswordVisible = !_isPasswordVisible);
   }
 
+  String _formatLastLogin(String? lastLogin) {
+    if (lastLogin == null) return '';
+    try {
+      final DateTime loginDate = DateTime.parse(lastLogin);
+      final DateTime now = DateTime.now();
+      final Duration difference = now.difference(loginDate);
+      
+      if (difference.inDays > 0) {
+        return '${difference.inDays} day${difference.inDays > 1 ? 's' : ''} ago';
+      } else if (difference.inHours > 0) {
+        return '${difference.inHours} hour${difference.inHours > 1 ? 's' : ''} ago';
+      } else {
+        return 'Recently';
+      }
+    } catch (e) {
+      return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -123,18 +160,16 @@ class _CashierLoginPageState extends State<CashierLoginPage>
       body: Container(
         height: MediaQuery.of(context).size.height,
         color: BarPOSTheme.secondaryDark,
-
         child: SafeArea(
           child: AnimatedBuilder(
             animation: _animationController,
-            builder:
-                (context, child) => Opacity(
-                  opacity: _fadeAnimation.value,
-                  child: Transform.translate(
-                    offset: _slideAnimation.value * 50, // Simplified transform
-                    child: _buildContent(theme, colorScheme),
-                  ),
-                ),
+            builder: (context, child) => Opacity(
+              opacity: _fadeAnimation.value,
+              child: Transform.translate(
+                offset: _slideAnimation.value * 50,
+                child: _buildContent(theme, colorScheme),
+              ),
+            ),
           ),
         ),
       ),
@@ -146,8 +181,9 @@ class _CashierLoginPageState extends State<CashierLoginPage>
       padding: const EdgeInsets.all(24.0),
       child: Column(
         children: [
-          const SizedBox(height: 40), // Reduced spacing
-          // Simplified logo section
+          const SizedBox(height: 40),
+          
+          // Logo section
           Container(
             padding: EdgeInsets.all(10),
             width: MediaQuery.of(context).size.width * 0.65,
@@ -155,9 +191,8 @@ class _CashierLoginPageState extends State<CashierLoginPage>
             decoration: BoxDecoration(
               shape: BoxShape.rectangle,
               color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(15), // Added smooth corners
+              borderRadius: BorderRadius.circular(15),
               border: Border.all(
-                // Added subtle border
                 color: Colors.white.withOpacity(0.3),
                 width: 1.5,
               ),
@@ -169,22 +204,13 @@ class _CashierLoginPageState extends State<CashierLoginPage>
 
           const SizedBox(height: 24),
 
-          // Title section with const text styles
-          Text(
-            '', // Displaying the user type
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              letterSpacing: 1.2,
-            ),
-            textAlign: TextAlign.center,
-          ),
+          // Welcome message with user data
+          _buildWelcomeSection(),
 
           const SizedBox(height: 8),
 
           Text(
-            '${userDesc(user)}',
+            userDesc(stringToUser(userData.userRole)),
             style: TextStyle(
               fontSize: 16,
               color: Colors.white.withOpacity(0.9),
@@ -193,16 +219,18 @@ class _CashierLoginPageState extends State<CashierLoginPage>
             textAlign: TextAlign.center,
           ),
 
+          // User info card for returning users
+          if (_isReturningUser) _buildUserInfoCard(),
+
           const SizedBox(height: 32),
 
-          // Simplified login form
+          // Login form
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 8),
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              // Removed expensive shadows and borders
             ),
             child: _buildForm(theme, colorScheme),
           ),
@@ -237,13 +265,117 @@ class _CashierLoginPageState extends State<CashierLoginPage>
     );
   }
 
+  Widget _buildWelcomeSection() {
+    return Column(
+      children: [
+        Text(
+          _isReturningUser ? 'Welcome Back!' : 'Welcome',
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            letterSpacing: 1.2,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        if (_isReturningUser && _userName != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              _userName!,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w500,
+                color: Colors.white.withOpacity(0.95),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildUserInfoCard() {
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          if (_userEmail != null) ...[
+            Row(
+              children: [
+                Icon(Icons.email_outlined, color: Colors.white.withOpacity(0.8), size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _userEmail!,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+          
+          if (_userDepartment != null) ...[
+            Row(
+              children: [
+                Icon(Icons.business_outlined, color: Colors.white.withOpacity(0.8), size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _userDepartment!,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+          
+          if (_lastLogin != null) ...[
+            Row(
+              children: [
+                Icon(Icons.access_time_outlined, color: Colors.white.withOpacity(0.8), size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Last login: ${_formatLastLogin(_lastLogin)}',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildForm(ThemeData theme, ColorScheme colorScheme) {
     return Form(
       key: _formKey,
       child: Column(
         children: [
           Text(
-            'Welcome Back',
+            _isReturningUser ? 'Sign In' : 'Welcome Back',
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: colorScheme.onSurface,
@@ -253,7 +385,7 @@ class _CashierLoginPageState extends State<CashierLoginPage>
 
           const SizedBox(height: 24),
 
-          // Simplified text fields
+          // Phone number field
           TextFormField(
             controller: _phoneNumberController,
             decoration: InputDecoration(
@@ -270,15 +402,13 @@ class _CashierLoginPageState extends State<CashierLoginPage>
                 vertical: 16,
               ),
             ),
-            validator:
-                (value) =>
-                    value?.isEmpty == true
-                        ? 'Please enter your username'
-                        : null,
+            validator: (value) =>
+                value?.isEmpty == true ? 'Please enter your username' : null,
           ),
 
           const SizedBox(height: 16),
 
+          // Password field
           TextFormField(
             controller: _passwordController,
             obscureText: !_isPasswordVisible,
@@ -335,27 +465,26 @@ class _CashierLoginPageState extends State<CashierLoginPage>
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                elevation: 2, // Reduced elevation
+                elevation: 2,
               ),
-              child:
-                  _isLoading
-                      ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
-                      : const Text(
-                        'Login',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Colors.white,
                         ),
                       ),
+                    )
+                  : const Text(
+                      'Login',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
             ),
           ),
         ],
