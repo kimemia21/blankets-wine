@@ -10,7 +10,7 @@ class CashierAuth {
 
       // Safe null checking
       if (reg["rsp"]?["success"]) {
-        userCashier = UserCashier.fromJson(reg["rsp"]["data"]);
+        appUser = AppUser.fromJson(reg["rsp"]["data"]);
         comms.setAuthToken(reg["rsp"]["data"]["token"]);
         ToastService.showSuccess("Success");
         return true;

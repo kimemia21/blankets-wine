@@ -15,12 +15,9 @@ class $CategoriesTable extends Categories
     'id',
     aliasedName,
     false,
-    hasAutoIncrement: true,
     type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'PRIMARY KEY AUTOINCREMENT',
-    ),
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
   );
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
@@ -52,6 +49,8 @@ class $CategoriesTable extends Categories
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
     }
     if (data.containsKey('name')) {
       context.handle(
@@ -65,7 +64,7 @@ class $CategoriesTable extends Categories
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {id};
+  Set<GeneratedColumn> get $primaryKey => const {};
   @override
   Category map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -153,26 +152,40 @@ class Category extends DataClass implements Insertable<Category> {
 class CategoriesCompanion extends UpdateCompanion<Category> {
   final Value<int> id;
   final Value<String> name;
+  final Value<int> rowid;
   const CategoriesCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
   CategoriesCompanion.insert({
-    this.id = const Value.absent(),
+    required int id,
     required String name,
-  }) : name = Value(name);
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name);
   static Insertable<Category> custom({
     Expression<int>? id,
     Expression<String>? name,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
-  CategoriesCompanion copyWith({Value<int>? id, Value<String>? name}) {
-    return CategoriesCompanion(id: id ?? this.id, name: name ?? this.name);
+  CategoriesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? name,
+    Value<int>? rowid,
+  }) {
+    return CategoriesCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      rowid: rowid ?? this.rowid,
+    );
   }
 
   @override
@@ -184,6 +197,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     if (name.present) {
       map['name'] = Variable<String>(name.value);
     }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
     return map;
   }
 
@@ -191,7 +207,8 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   String toString() {
     return (StringBuffer('CategoriesCompanion(')
           ..write('id: $id, ')
-          ..write('name: $name')
+          ..write('name: $name, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -228,53 +245,45 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _descriptionMeta = const VerificationMeta(
-    'description',
-  );
+  static const VerificationMeta _imageMeta = const VerificationMeta('image');
   @override
-  late final GeneratedColumn<String> description = GeneratedColumn<String>(
-    'description',
+  late final GeneratedColumn<String> image = GeneratedColumn<String>(
+    'image',
     aliasedName,
     true,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _salePriceMeta = const VerificationMeta(
-    'salePrice',
-  );
+  static const VerificationMeta _priceMeta = const VerificationMeta('price');
   @override
-  late final GeneratedColumn<double> salePrice = GeneratedColumn<double>(
-    'sale_price',
+  late final GeneratedColumn<double> price = GeneratedColumn<double>(
+    'price',
     aliasedName,
     false,
     type: DriftSqlType.double,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _retailPriceMeta = const VerificationMeta(
-    'retailPrice',
-  );
+  static const VerificationMeta _stockMeta = const VerificationMeta('stock');
   @override
-  late final GeneratedColumn<double> retailPrice = GeneratedColumn<double>(
-    'retail_price',
+  late final GeneratedColumn<int> stock = GeneratedColumn<int>(
+    'stock',
     aliasedName,
     false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _isActiveMeta = const VerificationMeta(
-    'isActive',
-  );
-  @override
-  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
-    'is_active',
-    aliasedName,
-    true,
-    type: DriftSqlType.bool,
+    type: DriftSqlType.int,
     requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("is_active" IN (0, 1))',
-    ),
-    defaultValue: const Constant(true),
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _reorderMeta = const VerificationMeta(
+    'reorder',
+  );
+  @override
+  late final GeneratedColumn<int> reorder = GeneratedColumn<int>(
+    'reorder',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
   );
   static const VerificationMeta _productCategoryMeta = const VerificationMeta(
     'productCategory',
@@ -290,25 +299,15 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
       'REFERENCES categories (id)',
     ),
   );
-  static const VerificationMeta _imageMeta = const VerificationMeta('image');
-  @override
-  late final GeneratedColumn<String> image = GeneratedColumn<String>(
-    'image',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
     name,
-    description,
-    salePrice,
-    retailPrice,
-    isActive,
-    productCategory,
     image,
+    price,
+    stock,
+    reorder,
+    productCategory,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -333,38 +332,30 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     } else if (isInserting) {
       context.missing(_nameMeta);
     }
-    if (data.containsKey('description')) {
+    if (data.containsKey('image')) {
       context.handle(
-        _descriptionMeta,
-        description.isAcceptableOrUnknown(
-          data['description']!,
-          _descriptionMeta,
-        ),
+        _imageMeta,
+        image.isAcceptableOrUnknown(data['image']!, _imageMeta),
       );
     }
-    if (data.containsKey('sale_price')) {
+    if (data.containsKey('price')) {
       context.handle(
-        _salePriceMeta,
-        salePrice.isAcceptableOrUnknown(data['sale_price']!, _salePriceMeta),
+        _priceMeta,
+        price.isAcceptableOrUnknown(data['price']!, _priceMeta),
       );
     } else if (isInserting) {
-      context.missing(_salePriceMeta);
+      context.missing(_priceMeta);
     }
-    if (data.containsKey('retail_price')) {
+    if (data.containsKey('stock')) {
       context.handle(
-        _retailPriceMeta,
-        retailPrice.isAcceptableOrUnknown(
-          data['retail_price']!,
-          _retailPriceMeta,
-        ),
+        _stockMeta,
+        stock.isAcceptableOrUnknown(data['stock']!, _stockMeta),
       );
-    } else if (isInserting) {
-      context.missing(_retailPriceMeta);
     }
-    if (data.containsKey('is_active')) {
+    if (data.containsKey('reorder')) {
       context.handle(
-        _isActiveMeta,
-        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+        _reorderMeta,
+        reorder.isAcceptableOrUnknown(data['reorder']!, _reorderMeta),
       );
     }
     if (data.containsKey('product_category')) {
@@ -377,12 +368,6 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
       );
     } else if (isInserting) {
       context.missing(_productCategoryMeta);
-    }
-    if (data.containsKey('image')) {
-      context.handle(
-        _imageMeta,
-        image.isAcceptableOrUnknown(data['image']!, _imageMeta),
-      );
     }
     return context;
   }
@@ -403,33 +388,30 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
             DriftSqlType.string,
             data['${effectivePrefix}name'],
           )!,
-      description: attachedDatabase.typeMapping.read(
+      image: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}description'],
+        data['${effectivePrefix}image'],
       ),
-      salePrice:
+      price:
           attachedDatabase.typeMapping.read(
             DriftSqlType.double,
-            data['${effectivePrefix}sale_price'],
+            data['${effectivePrefix}price'],
           )!,
-      retailPrice:
+      stock:
           attachedDatabase.typeMapping.read(
-            DriftSqlType.double,
-            data['${effectivePrefix}retail_price'],
+            DriftSqlType.int,
+            data['${effectivePrefix}stock'],
           )!,
-      isActive: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}is_active'],
-      ),
+      reorder:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.int,
+            data['${effectivePrefix}reorder'],
+          )!,
       productCategory:
           attachedDatabase.typeMapping.read(
             DriftSqlType.int,
             data['${effectivePrefix}product_category'],
           )!,
-      image: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}image'],
-      ),
     );
   }
 
@@ -442,39 +424,32 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
 class Product extends DataClass implements Insertable<Product> {
   final int id;
   final String name;
-  final String? description;
-  final double salePrice;
-  final double retailPrice;
-  final bool? isActive;
-  final int productCategory;
   final String? image;
+  final double price;
+  final int stock;
+  final int reorder;
+  final int productCategory;
   const Product({
     required this.id,
     required this.name,
-    this.description,
-    required this.salePrice,
-    required this.retailPrice,
-    this.isActive,
-    required this.productCategory,
     this.image,
+    required this.price,
+    required this.stock,
+    required this.reorder,
+    required this.productCategory,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['name'] = Variable<String>(name);
-    if (!nullToAbsent || description != null) {
-      map['description'] = Variable<String>(description);
-    }
-    map['sale_price'] = Variable<double>(salePrice);
-    map['retail_price'] = Variable<double>(retailPrice);
-    if (!nullToAbsent || isActive != null) {
-      map['is_active'] = Variable<bool>(isActive);
-    }
-    map['product_category'] = Variable<int>(productCategory);
     if (!nullToAbsent || image != null) {
       map['image'] = Variable<String>(image);
     }
+    map['price'] = Variable<double>(price);
+    map['stock'] = Variable<int>(stock);
+    map['reorder'] = Variable<int>(reorder);
+    map['product_category'] = Variable<int>(productCategory);
     return map;
   }
 
@@ -482,19 +457,12 @@ class Product extends DataClass implements Insertable<Product> {
     return ProductsCompanion(
       id: Value(id),
       name: Value(name),
-      description:
-          description == null && nullToAbsent
-              ? const Value.absent()
-              : Value(description),
-      salePrice: Value(salePrice),
-      retailPrice: Value(retailPrice),
-      isActive:
-          isActive == null && nullToAbsent
-              ? const Value.absent()
-              : Value(isActive),
-      productCategory: Value(productCategory),
       image:
           image == null && nullToAbsent ? const Value.absent() : Value(image),
+      price: Value(price),
+      stock: Value(stock),
+      reorder: Value(reorder),
+      productCategory: Value(productCategory),
     );
   }
 
@@ -506,12 +474,11 @@ class Product extends DataClass implements Insertable<Product> {
     return Product(
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
-      description: serializer.fromJson<String?>(json['description']),
-      salePrice: serializer.fromJson<double>(json['salePrice']),
-      retailPrice: serializer.fromJson<double>(json['retailPrice']),
-      isActive: serializer.fromJson<bool?>(json['isActive']),
-      productCategory: serializer.fromJson<int>(json['productCategory']),
       image: serializer.fromJson<String?>(json['image']),
+      price: serializer.fromJson<double>(json['price']),
+      stock: serializer.fromJson<int>(json['stock']),
+      reorder: serializer.fromJson<int>(json['reorder']),
+      productCategory: serializer.fromJson<int>(json['productCategory']),
     );
   }
   @override
@@ -520,49 +487,43 @@ class Product extends DataClass implements Insertable<Product> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
-      'description': serializer.toJson<String?>(description),
-      'salePrice': serializer.toJson<double>(salePrice),
-      'retailPrice': serializer.toJson<double>(retailPrice),
-      'isActive': serializer.toJson<bool?>(isActive),
-      'productCategory': serializer.toJson<int>(productCategory),
       'image': serializer.toJson<String?>(image),
+      'price': serializer.toJson<double>(price),
+      'stock': serializer.toJson<int>(stock),
+      'reorder': serializer.toJson<int>(reorder),
+      'productCategory': serializer.toJson<int>(productCategory),
     };
   }
 
   Product copyWith({
     int? id,
     String? name,
-    Value<String?> description = const Value.absent(),
-    double? salePrice,
-    double? retailPrice,
-    Value<bool?> isActive = const Value.absent(),
-    int? productCategory,
     Value<String?> image = const Value.absent(),
+    double? price,
+    int? stock,
+    int? reorder,
+    int? productCategory,
   }) => Product(
     id: id ?? this.id,
     name: name ?? this.name,
-    description: description.present ? description.value : this.description,
-    salePrice: salePrice ?? this.salePrice,
-    retailPrice: retailPrice ?? this.retailPrice,
-    isActive: isActive.present ? isActive.value : this.isActive,
-    productCategory: productCategory ?? this.productCategory,
     image: image.present ? image.value : this.image,
+    price: price ?? this.price,
+    stock: stock ?? this.stock,
+    reorder: reorder ?? this.reorder,
+    productCategory: productCategory ?? this.productCategory,
   );
   Product copyWithCompanion(ProductsCompanion data) {
     return Product(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
-      description:
-          data.description.present ? data.description.value : this.description,
-      salePrice: data.salePrice.present ? data.salePrice.value : this.salePrice,
-      retailPrice:
-          data.retailPrice.present ? data.retailPrice.value : this.retailPrice,
-      isActive: data.isActive.present ? data.isActive.value : this.isActive,
+      image: data.image.present ? data.image.value : this.image,
+      price: data.price.present ? data.price.value : this.price,
+      stock: data.stock.present ? data.stock.value : this.stock,
+      reorder: data.reorder.present ? data.reorder.value : this.reorder,
       productCategory:
           data.productCategory.present
               ? data.productCategory.value
               : this.productCategory,
-      image: data.image.present ? data.image.value : this.image,
     );
   }
 
@@ -571,114 +532,96 @@ class Product extends DataClass implements Insertable<Product> {
     return (StringBuffer('Product(')
           ..write('id: $id, ')
           ..write('name: $name, ')
-          ..write('description: $description, ')
-          ..write('salePrice: $salePrice, ')
-          ..write('retailPrice: $retailPrice, ')
-          ..write('isActive: $isActive, ')
-          ..write('productCategory: $productCategory, ')
-          ..write('image: $image')
+          ..write('image: $image, ')
+          ..write('price: $price, ')
+          ..write('stock: $stock, ')
+          ..write('reorder: $reorder, ')
+          ..write('productCategory: $productCategory')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
-    id,
-    name,
-    description,
-    salePrice,
-    retailPrice,
-    isActive,
-    productCategory,
-    image,
-  );
+  int get hashCode =>
+      Object.hash(id, name, image, price, stock, reorder, productCategory);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Product &&
           other.id == this.id &&
           other.name == this.name &&
-          other.description == this.description &&
-          other.salePrice == this.salePrice &&
-          other.retailPrice == this.retailPrice &&
-          other.isActive == this.isActive &&
-          other.productCategory == this.productCategory &&
-          other.image == this.image);
+          other.image == this.image &&
+          other.price == this.price &&
+          other.stock == this.stock &&
+          other.reorder == this.reorder &&
+          other.productCategory == this.productCategory);
 }
 
 class ProductsCompanion extends UpdateCompanion<Product> {
   final Value<int> id;
   final Value<String> name;
-  final Value<String?> description;
-  final Value<double> salePrice;
-  final Value<double> retailPrice;
-  final Value<bool?> isActive;
-  final Value<int> productCategory;
   final Value<String?> image;
+  final Value<double> price;
+  final Value<int> stock;
+  final Value<int> reorder;
+  final Value<int> productCategory;
   const ProductsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
-    this.description = const Value.absent(),
-    this.salePrice = const Value.absent(),
-    this.retailPrice = const Value.absent(),
-    this.isActive = const Value.absent(),
-    this.productCategory = const Value.absent(),
     this.image = const Value.absent(),
+    this.price = const Value.absent(),
+    this.stock = const Value.absent(),
+    this.reorder = const Value.absent(),
+    this.productCategory = const Value.absent(),
   });
   ProductsCompanion.insert({
     this.id = const Value.absent(),
     required String name,
-    this.description = const Value.absent(),
-    required double salePrice,
-    required double retailPrice,
-    this.isActive = const Value.absent(),
-    required int productCategory,
     this.image = const Value.absent(),
+    required double price,
+    this.stock = const Value.absent(),
+    this.reorder = const Value.absent(),
+    required int productCategory,
   }) : name = Value(name),
-       salePrice = Value(salePrice),
-       retailPrice = Value(retailPrice),
+       price = Value(price),
        productCategory = Value(productCategory);
   static Insertable<Product> custom({
     Expression<int>? id,
     Expression<String>? name,
-    Expression<String>? description,
-    Expression<double>? salePrice,
-    Expression<double>? retailPrice,
-    Expression<bool>? isActive,
-    Expression<int>? productCategory,
     Expression<String>? image,
+    Expression<double>? price,
+    Expression<int>? stock,
+    Expression<int>? reorder,
+    Expression<int>? productCategory,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
-      if (description != null) 'description': description,
-      if (salePrice != null) 'sale_price': salePrice,
-      if (retailPrice != null) 'retail_price': retailPrice,
-      if (isActive != null) 'is_active': isActive,
-      if (productCategory != null) 'product_category': productCategory,
       if (image != null) 'image': image,
+      if (price != null) 'price': price,
+      if (stock != null) 'stock': stock,
+      if (reorder != null) 'reorder': reorder,
+      if (productCategory != null) 'product_category': productCategory,
     });
   }
 
   ProductsCompanion copyWith({
     Value<int>? id,
     Value<String>? name,
-    Value<String?>? description,
-    Value<double>? salePrice,
-    Value<double>? retailPrice,
-    Value<bool?>? isActive,
-    Value<int>? productCategory,
     Value<String?>? image,
+    Value<double>? price,
+    Value<int>? stock,
+    Value<int>? reorder,
+    Value<int>? productCategory,
   }) {
     return ProductsCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
-      description: description ?? this.description,
-      salePrice: salePrice ?? this.salePrice,
-      retailPrice: retailPrice ?? this.retailPrice,
-      isActive: isActive ?? this.isActive,
-      productCategory: productCategory ?? this.productCategory,
       image: image ?? this.image,
+      price: price ?? this.price,
+      stock: stock ?? this.stock,
+      reorder: reorder ?? this.reorder,
+      productCategory: productCategory ?? this.productCategory,
     );
   }
 
@@ -691,23 +634,20 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     if (name.present) {
       map['name'] = Variable<String>(name.value);
     }
-    if (description.present) {
-      map['description'] = Variable<String>(description.value);
+    if (image.present) {
+      map['image'] = Variable<String>(image.value);
     }
-    if (salePrice.present) {
-      map['sale_price'] = Variable<double>(salePrice.value);
+    if (price.present) {
+      map['price'] = Variable<double>(price.value);
     }
-    if (retailPrice.present) {
-      map['retail_price'] = Variable<double>(retailPrice.value);
+    if (stock.present) {
+      map['stock'] = Variable<int>(stock.value);
     }
-    if (isActive.present) {
-      map['is_active'] = Variable<bool>(isActive.value);
+    if (reorder.present) {
+      map['reorder'] = Variable<int>(reorder.value);
     }
     if (productCategory.present) {
       map['product_category'] = Variable<int>(productCategory.value);
-    }
-    if (image.present) {
-      map['image'] = Variable<String>(image.value);
     }
     return map;
   }
@@ -717,12 +657,11 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     return (StringBuffer('ProductsCompanion(')
           ..write('id: $id, ')
           ..write('name: $name, ')
-          ..write('description: $description, ')
-          ..write('salePrice: $salePrice, ')
-          ..write('retailPrice: $retailPrice, ')
-          ..write('isActive: $isActive, ')
-          ..write('productCategory: $productCategory, ')
-          ..write('image: $image')
+          ..write('image: $image, ')
+          ..write('price: $price, ')
+          ..write('stock: $stock, ')
+          ..write('reorder: $reorder, ')
+          ..write('productCategory: $productCategory')
           ..write(')'))
         .toString();
   }
@@ -741,9 +680,17 @@ abstract class _$BnwDatabase extends GeneratedDatabase {
 }
 
 typedef $$CategoriesTableCreateCompanionBuilder =
-    CategoriesCompanion Function({Value<int> id, required String name});
+    CategoriesCompanion Function({
+      required int id,
+      required String name,
+      Value<int> rowid,
+    });
 typedef $$CategoriesTableUpdateCompanionBuilder =
-    CategoriesCompanion Function({Value<int> id, Value<String> name});
+    CategoriesCompanion Function({
+      Value<int> id,
+      Value<String> name,
+      Value<int> rowid,
+    });
 
 final class $$CategoriesTableReferences
     extends BaseReferences<_$BnwDatabase, $CategoriesTable, Category> {
@@ -908,10 +855,15 @@ class $$CategoriesTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
-              }) => CategoriesCompanion(id: id, name: name),
+                Value<int> rowid = const Value.absent(),
+              }) => CategoriesCompanion(id: id, name: name, rowid: rowid),
           createCompanionCallback:
-              ({Value<int> id = const Value.absent(), required String name}) =>
-                  CategoriesCompanion.insert(id: id, name: name),
+              ({
+                required int id,
+                required String name,
+                Value<int> rowid = const Value.absent(),
+              }) =>
+                  CategoriesCompanion.insert(id: id, name: name, rowid: rowid),
           withReferenceMapper:
               (p0) =>
                   p0
@@ -977,23 +929,21 @@ typedef $$ProductsTableCreateCompanionBuilder =
     ProductsCompanion Function({
       Value<int> id,
       required String name,
-      Value<String?> description,
-      required double salePrice,
-      required double retailPrice,
-      Value<bool?> isActive,
-      required int productCategory,
       Value<String?> image,
+      required double price,
+      Value<int> stock,
+      Value<int> reorder,
+      required int productCategory,
     });
 typedef $$ProductsTableUpdateCompanionBuilder =
     ProductsCompanion Function({
       Value<int> id,
       Value<String> name,
-      Value<String?> description,
-      Value<double> salePrice,
-      Value<double> retailPrice,
-      Value<bool?> isActive,
-      Value<int> productCategory,
       Value<String?> image,
+      Value<double> price,
+      Value<int> stock,
+      Value<int> reorder,
+      Value<int> productCategory,
     });
 
 final class $$ProductsTableReferences
@@ -1039,28 +989,23 @@ class $$ProductsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get description => $composableBuilder(
-    column: $table.description,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<double> get salePrice => $composableBuilder(
-    column: $table.salePrice,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<double> get retailPrice => $composableBuilder(
-    column: $table.retailPrice,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<bool> get isActive => $composableBuilder(
-    column: $table.isActive,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<String> get image => $composableBuilder(
     column: $table.image,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get price => $composableBuilder(
+    column: $table.price,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get stock => $composableBuilder(
+    column: $table.stock,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get reorder => $composableBuilder(
+    column: $table.reorder,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1107,28 +1052,23 @@ class $$ProductsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get description => $composableBuilder(
-    column: $table.description,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<double> get salePrice => $composableBuilder(
-    column: $table.salePrice,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<double> get retailPrice => $composableBuilder(
-    column: $table.retailPrice,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<bool> get isActive => $composableBuilder(
-    column: $table.isActive,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<String> get image => $composableBuilder(
     column: $table.image,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get price => $composableBuilder(
+    column: $table.price,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get stock => $composableBuilder(
+    column: $table.stock,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get reorder => $composableBuilder(
+    column: $table.reorder,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -1171,24 +1111,17 @@ class $$ProductsTableAnnotationComposer
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
 
-  GeneratedColumn<String> get description => $composableBuilder(
-    column: $table.description,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<double> get salePrice =>
-      $composableBuilder(column: $table.salePrice, builder: (column) => column);
-
-  GeneratedColumn<double> get retailPrice => $composableBuilder(
-    column: $table.retailPrice,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<bool> get isActive =>
-      $composableBuilder(column: $table.isActive, builder: (column) => column);
-
   GeneratedColumn<String> get image =>
       $composableBuilder(column: $table.image, builder: (column) => column);
+
+  GeneratedColumn<double> get price =>
+      $composableBuilder(column: $table.price, builder: (column) => column);
+
+  GeneratedColumn<int> get stock =>
+      $composableBuilder(column: $table.stock, builder: (column) => column);
+
+  GeneratedColumn<int> get reorder =>
+      $composableBuilder(column: $table.reorder, builder: (column) => column);
 
   $$CategoriesTableAnnotationComposer get productCategory {
     final $$CategoriesTableAnnotationComposer composer = $composerBuilder(
@@ -1244,41 +1177,37 @@ class $$ProductsTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
-                Value<String?> description = const Value.absent(),
-                Value<double> salePrice = const Value.absent(),
-                Value<double> retailPrice = const Value.absent(),
-                Value<bool?> isActive = const Value.absent(),
-                Value<int> productCategory = const Value.absent(),
                 Value<String?> image = const Value.absent(),
+                Value<double> price = const Value.absent(),
+                Value<int> stock = const Value.absent(),
+                Value<int> reorder = const Value.absent(),
+                Value<int> productCategory = const Value.absent(),
               }) => ProductsCompanion(
                 id: id,
                 name: name,
-                description: description,
-                salePrice: salePrice,
-                retailPrice: retailPrice,
-                isActive: isActive,
-                productCategory: productCategory,
                 image: image,
+                price: price,
+                stock: stock,
+                reorder: reorder,
+                productCategory: productCategory,
               ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
                 required String name,
-                Value<String?> description = const Value.absent(),
-                required double salePrice,
-                required double retailPrice,
-                Value<bool?> isActive = const Value.absent(),
-                required int productCategory,
                 Value<String?> image = const Value.absent(),
+                required double price,
+                Value<int> stock = const Value.absent(),
+                Value<int> reorder = const Value.absent(),
+                required int productCategory,
               }) => ProductsCompanion.insert(
                 id: id,
                 name: name,
-                description: description,
-                salePrice: salePrice,
-                retailPrice: retailPrice,
-                isActive: isActive,
-                productCategory: productCategory,
                 image: image,
+                price: price,
+                stock: stock,
+                reorder: reorder,
+                productCategory: productCategory,
               ),
           withReferenceMapper:
               (p0) =>

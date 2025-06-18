@@ -8,12 +8,14 @@ import 'package:blankets_and_wines_example/preferrences/userPreferences.dart';
 String qrcode = "";
 Comms comms = Comms();
 
-UserCashier userCashier = UserCashier.empty();
+AppUser appUser = AppUser.empty();
 UserPreferencesManager preferences = UserPreferencesManager();
 UserData userData = UserData.empty();
 
 Cart cartG = Cart();
-String baseUrl = "http://167.99.15.36:8080/api/v1";
+String baseUrl = 
+// "http://192.168.100.56:8002/api/v1";
+ "http://167.99.15.36:8080/api/v1";
 
 users stringToUser(String user) {
   switch (user.toLowerCase()) {

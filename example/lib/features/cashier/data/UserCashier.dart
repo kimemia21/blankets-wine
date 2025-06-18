@@ -1,11 +1,11 @@
-class UserCashier {
+class AppUser {
   final String fName;
   final String lName;
   final int barId;
   final bool isAdmin;
   final String token;
 
-  UserCashier({
+  AppUser({
     required this.fName,
     required this.lName,
     required this.barId,
@@ -14,8 +14,8 @@ class UserCashier {
   });
 
 
-  factory UserCashier.fromJson(Map<String, dynamic> json) {
-    return UserCashier(
+  factory AppUser.fromJson(Map<String, dynamic> json) {
+    return AppUser(
       fName: json['fName'] ?? '',
       lName: json['lName'] ?? '',
       barId: json['barId'] ?? 0,
@@ -23,8 +23,8 @@ class UserCashier {
       token: json['token'] ?? '',
     );
   }
-  factory UserCashier.empty() {
-    return UserCashier(
+  factory AppUser.empty() {
+    return AppUser(
       fName: '',
       lName: '',
       barId: 1,

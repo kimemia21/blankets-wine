@@ -34,6 +34,7 @@ class UserPreferencesManager {
 
   // Keys for storing data
   static const String _keyUserRole = 'user_role';
+  static const String _keyUserRoleId = 'user_role_id';
   static const String _keyUsername = 'username';
   static const String _keyPassword = 'password';
   static const String _keyPhoneNumber = 'phone_number';
@@ -42,6 +43,7 @@ class UserPreferencesManager {
   // Save user data
   Future<bool> saveUserData({
     required String userRole,
+    required int userRoleId,
     required String username,
     required String password,
     String? phoneNumber,
@@ -50,6 +52,7 @@ class UserPreferencesManager {
       final prefs = await _prefs;
       
       await prefs.setString(_keyUserRole, userRole);
+      await prefs.setInt(_keyUserRoleId, userRoleId);
       await prefs.setString(_keyUsername, username);
       await prefs.setString(_keyPassword, password);
       if (phoneNumber != null) {
@@ -71,6 +74,17 @@ class UserPreferencesManager {
       return prefs.getString(_keyUserRole);
     } catch (e) {
       print('Error getting user role: $e');
+      return null;
+    }
+  }
+
+  // Get user role ID
+  Future<int?> getUserRoleId() async {
+    try {
+      final prefs = await _prefs;
+      return prefs.getInt(_keyUserRoleId);
+    } catch (e) {
+      print('Error getting user role ID: $e');
       return null;
     }
   }
@@ -114,14 +128,16 @@ class UserPreferencesManager {
       final prefs = await _prefs;
       
       final userRole = prefs.getString(_keyUserRole);
+      final userRoleId = prefs.getInt(_keyUserRoleId);
       final username = prefs.getString(_keyUsername);
       final password = prefs.getString(_keyPassword);
       final phoneNumber = prefs.getString(_keyPhoneNumber);
       final isLoggedIn = prefs.getBool(_keyIsLoggedIn) ?? false;
 
-      if (userRole != null && username != null && password != null) {
+      if (userRole != null && userRoleId != null && username != null && password != null) {
         return UserData(
           userRole: userRole,
+          userRoleId: userRoleId,
           username: username,
           password: password,
           phoneNumber: phoneNumber!,
@@ -153,6 +169,17 @@ class UserPreferencesManager {
       return await prefs.setString(_keyUserRole, newRole);
     } catch (e) {
       print('Error updating user role: $e');
+      return false;
+    }
+  }
+
+  // Update user role ID
+  Future<bool> updateUserRoleId(int newRoleId) async {
+    try {
+      final prefs = await _prefs;
+      return await prefs.setInt(_keyUserRoleId, newRoleId);
+    } catch (e) {
+      print('Error updating user role ID: $e');
       return false;
     }
   }
@@ -196,6 +223,7 @@ class UserPreferencesManager {
       final prefs = await _prefs;
       
       await prefs.remove(_keyUserRole);
+      await prefs.remove(_keyUserRoleId);
       await prefs.remove(_keyUsername);
       await prefs.remove(_keyPassword);
       await prefs.remove(_keyPhoneNumber);
@@ -227,6 +255,7 @@ class AuthenticationService {
   // Login method
   Future<bool> login({
     required String userRole,
+    required int userRoleId,
     required String username,
     required String password,
     String? phoneNumber,
@@ -236,6 +265,7 @@ class AuthenticationService {
     
     final success = await _prefsManager.saveUserData(
       userRole: userRole,
+      userRoleId: userRoleId,
       username: username,
       password: password,
       phoneNumber: phoneNumber,

@@ -5,19 +5,21 @@ import 'package:blankets_and_wines_example/core/utils/ToastService.dart';
 import 'package:blankets_and_wines_example/core/utils/initializers.dart';
 import 'package:blankets_and_wines_example/data/models/UserRoles.dart';
 import 'package:blankets_and_wines_example/data/services/FetchGlobals.dart';
+import 'package:blankets_and_wines_example/features/Stockist/Stockist.dart';
 import 'package:blankets_and_wines_example/features/cashier/Auth/authfunc.dart';
 import 'package:blankets_and_wines_example/features/cashier/main/CashierMain.dart';
+import 'package:blankets_and_wines_example/onBoarding/OnBoarding.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-class CashierLoginPage extends StatefulWidget {
-  const CashierLoginPage({Key? key}) : super(key: key);
+class LoginPage extends StatefulWidget {
+  const LoginPage({Key? key}) : super(key: key);
 
   @override
-  State<CashierLoginPage> createState() => _CashierLoginPageState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
-class _CashierLoginPageState extends State<CashierLoginPage>
+class _LoginPageState extends State<LoginPage>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _phoneNumberController = TextEditingController();
@@ -30,7 +32,7 @@ class _CashierLoginPageState extends State<CashierLoginPage>
   String? _userName;
   String? _userEmail;
   String? _userPhone;
-  String? _userDepartment;
+  String? _userRole;
   String? _lastLogin;
   bool _isReturningUser = false;
 
@@ -81,10 +83,13 @@ class _CashierLoginPageState extends State<CashierLoginPage>
   // Load user data from preferences
   Future<void> _loadUserData() async {
     try {
-      _userName = userData.username;
-      _userEmail = userData.username;
-    
-      _userPhone = userData.phoneNumber;
+      _userRole = await preferences.getUserRole();
+      if (await preferences.isUserLoggedIn()) {
+        _userName = userData.username;
+        _userEmail = userData.username;
+        _userPhone = userData.phoneNumber;
+      }
+
       // Check if user has logged in before
       if (_userName != null && _userName!.isNotEmpty) {
         setState(() {
@@ -109,13 +114,29 @@ class _CashierLoginPageState extends State<CashierLoginPage>
       Map<String, dynamic> data = {
         "username": _phoneNumberController.text,
         "password": _passwordController.text,
+        "role": (await preferences.getUserRoleId()),
       };
       bool login = await CashierAuth.login(data: data);
       if (login) {
+        await preferences.saveUserData(
+          userRole: _userRole!,
+          username: _phoneNumberController.text,
+          password: _passwordController.text,
+          phoneNumber: _phoneNumberController.text,
+          userRoleId: (await preferences.getUserRoleId()) ?? 0,
+        );
+        print(await preferences.getUserData());
+
+        userData = (await preferences.getUserData())!;
+
         setState(() => _isLoading = false);
+
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => Cashier()),
+          MaterialPageRoute(
+            builder:
+                (context) => homepageNavigator(stringToUser(userData.userRole)),
+          ),
         );
       } else {
         setState(() => _isLoading = false);
@@ -125,6 +146,17 @@ class _CashierLoginPageState extends State<CashierLoginPage>
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Widget homepageNavigator(users user) {
+    switch (user) {
+      case users.cashier:
+        return Cashier();
+      case users.stockist:
+        return StockistMainScreen();
+      default:
+        return Cashier();
     }
   }
 
@@ -138,7 +170,7 @@ class _CashierLoginPageState extends State<CashierLoginPage>
       final DateTime loginDate = DateTime.parse(lastLogin);
       final DateTime now = DateTime.now();
       final Duration difference = now.difference(loginDate);
-      
+
       if (difference.inDays > 0) {
         return '${difference.inDays} day${difference.inDays > 1 ? 's' : ''} ago';
       } else if (difference.inHours > 0) {
@@ -163,13 +195,14 @@ class _CashierLoginPageState extends State<CashierLoginPage>
         child: SafeArea(
           child: AnimatedBuilder(
             animation: _animationController,
-            builder: (context, child) => Opacity(
-              opacity: _fadeAnimation.value,
-              child: Transform.translate(
-                offset: _slideAnimation.value * 50,
-                child: _buildContent(theme, colorScheme),
-              ),
-            ),
+            builder:
+                (context, child) => Opacity(
+                  opacity: _fadeAnimation.value,
+                  child: Transform.translate(
+                    offset: _slideAnimation.value * 50,
+                    child: _buildContent(theme, colorScheme),
+                  ),
+                ),
           ),
         ),
       ),
@@ -182,7 +215,7 @@ class _CashierLoginPageState extends State<CashierLoginPage>
       child: Column(
         children: [
           const SizedBox(height: 40),
-          
+
           // Logo section
           Container(
             padding: EdgeInsets.all(10),
@@ -210,7 +243,7 @@ class _CashierLoginPageState extends State<CashierLoginPage>
           const SizedBox(height: 8),
 
           Text(
-            userDesc(stringToUser(userData.userRole)),
+            userDesc(stringToUser(_userRole!)),
             style: TextStyle(
               fontSize: 16,
               color: Colors.white.withOpacity(0.9),
@@ -241,19 +274,20 @@ class _CashierLoginPageState extends State<CashierLoginPage>
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                "Don't have an account? ",
-                style: TextStyle(color: Colors.white.withOpacity(0.9)),
-              ),
               GestureDetector(
                 onTap: () {
-                  // Add sign up navigation
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => OnboardingPage(wasFromLogin: true),
+                    ),
+                  );
                 },
                 child: const Text(
-                  'Sign Up',
+                  'Switch Role',
                   style: TextStyle(
                     color: Colors.white,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                     decoration: TextDecoration.underline,
                   ),
                 ),
@@ -302,17 +336,18 @@ class _CashierLoginPageState extends State<CashierLoginPage>
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.2),
-          width: 1,
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
       ),
       child: Column(
         children: [
           if (_userEmail != null) ...[
             Row(
               children: [
-                Icon(Icons.email_outlined, color: Colors.white.withOpacity(0.8), size: 16),
+                Icon(
+                  Icons.email_outlined,
+                  color: Colors.white.withOpacity(0.8),
+                  size: 16,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -327,30 +362,15 @@ class _CashierLoginPageState extends State<CashierLoginPage>
             ),
             const SizedBox(height: 8),
           ],
-          
-          if (_userDepartment != null) ...[
-            Row(
-              children: [
-                Icon(Icons.business_outlined, color: Colors.white.withOpacity(0.8), size: 16),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _userDepartment!,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-          ],
-          
+
           if (_lastLogin != null) ...[
             Row(
               children: [
-                Icon(Icons.access_time_outlined, color: Colors.white.withOpacity(0.8), size: 16),
+                Icon(
+                  Icons.access_time_outlined,
+                  color: Colors.white.withOpacity(0.8),
+                  size: 16,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -402,8 +422,11 @@ class _CashierLoginPageState extends State<CashierLoginPage>
                 vertical: 16,
               ),
             ),
-            validator: (value) =>
-                value?.isEmpty == true ? 'Please enter your username' : null,
+            validator:
+                (value) =>
+                    value?.isEmpty == true
+                        ? 'Please enter your username'
+                        : null,
           ),
 
           const SizedBox(height: 16),
@@ -467,24 +490,25 @@ class _CashierLoginPageState extends State<CashierLoginPage>
                 ),
                 elevation: 2,
               ),
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Colors.white,
+              child:
+                  _isLoading
+                      ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      )
+                      : const Text(
+                        'Login',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    )
-                  : const Text(
-                      'Login',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
             ),
           ),
         ],

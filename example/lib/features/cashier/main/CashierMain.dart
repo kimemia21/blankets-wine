@@ -151,7 +151,7 @@ class _CashierState extends State<Cashier> {
   @override
   void initState() {
     super.initState();
-    drinks = CashierFunctions.fetchDrinks("products/${userCashier.barId}");
+    drinks = CashierFunctions.fetchDrinks("products/${appUser.barId}");
   }
 
   @override

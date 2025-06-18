@@ -5,10 +5,10 @@ import 'categories_table.dart';
 class Products extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text().withLength(min: 1, max: 100)();
-  TextColumn get description => text().nullable()();
-  RealColumn get salePrice => real().named('sale_price')();
-  RealColumn get retailPrice => real().named('retail_price')();
-  BoolColumn get isActive => boolean().withDefault(const Constant(true)).nullable()();
-  IntColumn get productCategory => integer().named('product_category').references(Categories, #id)();
   TextColumn get image => text().nullable()();
-}   
+  RealColumn get price => real()();
+  IntColumn get stock => integer().withDefault(const Constant(0))();
+  IntColumn get reorder => integer().withDefault(const Constant(0))();
+  IntColumn get productCategory => integer().named('product_category').references(Categories, #id)();
+}
+

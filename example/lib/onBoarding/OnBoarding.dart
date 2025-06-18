@@ -14,7 +14,8 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class OnboardingPage extends StatefulWidget {
-  const OnboardingPage({Key? key}) : super(key: key);
+  final bool wasFromLogin;
+  const OnboardingPage({required this.wasFromLogin});
 
   @override
   State<OnboardingPage> createState() => _OnboardingPageState();
@@ -23,52 +24,87 @@ class OnboardingPage extends StatefulWidget {
 class _OnboardingPageState extends State<OnboardingPage>
     with SingleTickerProviderStateMixin {
   String? _selectedUserType;
+  int? _selectedUserId;
   bool _isLoading = false;
   bool _hasInternet = true;
   bool _isInitialized = false;
+  bool _disposed = false;
 
-  // Cached data
+  // Cached data with Map for O(1) lookup
   List<UserRoles>? _cachedRoles;
+  Map<String, UserRoles> _rolesMap = {};
   Timer? _networkTimer;
 
-  // Animation controller - reduced complexity
+  // Animation controller - optimized
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
-  // Logo URL constant
+  // Pre-computed icon map for O(1) lookup
+  static const Map<String, IconData> _iconMap = {
+    'Super Admin': Icons.admin_panel_settings,
+    'Cashier': Icons.point_of_sale,
+    'Stockist': Icons.inventory_2,
+    'Steward': Icons.room_service,
+    'Cowgirl': Icons.person,
+    'Store Keeper': Icons.store,
+  };
 
   @override
   void initState() {
     super.initState();
+    _setupAnimations();
     _initializeAsync();
   }
 
-  // Single initialization method
+  // Optimized single initialization method
   Future<void> _initializeAsync() async {
-    _setupAnimations();
-    await preferences.getUserRole() == null
-        ? _selectedUserType = null
-        : _selectedUserType = await preferences.getUserRole();
+    if (_disposed) return;
+    
+    // Load preferences in parallel for better performance
+    final preferenceFutures = [
+      preferences.getUserRole(),
+      preferences.getUserRoleId(),
+      preferences.isUserLoggedIn(),
+    ];
 
-    if (await preferences.isUserLoggedIn()) {
-      String? userRole = await preferences.getUserRole();
-      nextScreenNavigator(userRole!);
-    }
+    try {
+      final results = await Future.wait(preferenceFutures);
+      if (_disposed) return;
 
-    // Run network operations in parallel
-    await Future.wait([_loadUserRoles(), _checkNetworkConnection()]);
+      _selectedUserType = results[0] as String?;
+      _selectedUserId = results[1] as int?;
+      final isLoggedIn = results[2] as bool;
 
-    _setupPeriodicNetworkCheck();
+      // Early navigation for logged-in users
+      if (isLoggedIn && !widget.wasFromLogin && _selectedUserType != null) {
+        return nextScreenNavigator(_selectedUserType!, _selectedUserId!);
+      }
 
-    if (mounted) {
-      setState(() => _isInitialized = true);
-      _animationController.forward();
+      // Run network operations in parallel with role loading
+      final futures = <Future>[
+        _loadUserRoles(),
+        _checkNetworkConnection(),
+      ];
+      
+      await Future.wait(futures);
+      _setupPeriodicNetworkCheck();
+
+      if (mounted && !_disposed) {
+        setState(() => _isInitialized = true);
+        _animationController.forward();
+      }
+    } catch (e) {
+      if (!_disposed && mounted) {
+        ToastService.showError("Initialization failed: $e");
+        setState(() => _isInitialized = true);
+        _animationController.forward();
+      }
     }
   }
 
   void _setupAnimations() {
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 400), // Reduced duration
+      duration: const Duration(milliseconds: 300), // Reduced from 400ms
       vsync: this,
     );
 
@@ -78,46 +114,56 @@ class _OnboardingPageState extends State<OnboardingPage>
   }
 
   Future<void> _loadUserRoles() async {
-    if (_cachedRoles != null) return; // Already cached
+    if (_disposed || _cachedRoles != null) return; // Already cached
 
     try {
-      _cachedRoles = await fetchGlobal<UserRoles>(
+      final roles = await fetchGlobal<UserRoles>(
         getRequests: (endpoint) => comms.getRequests(endpoint: endpoint),
         fromJson: (json) => UserRoles.fromJson(json),
         endpoint: "users/roles",
       );
+      
+      if (_disposed) return;
+      
+      _cachedRoles = roles;
+      // Build Map for O(1) lookups
+      _rolesMap = {for (var role in roles) role.name: role};
+      
     } catch (e) {
-      ToastService.showError("$e");
-
-      print('Error loading user roles: $e');
-      // Provide fallback data if API fails
-      // _cachedRoles = _getFallbackRoles();
+      if (!_disposed) {
+        ToastService.showError("Failed to load roles: $e");
+        print('Error loading user roles: $e');
+        // Set empty list to prevent infinite loading
+        _cachedRoles = [];
+      }
     }
   }
 
-  // Fallback roles in case API fails
-
   Future<void> _checkNetworkConnection() async {
+    if (_disposed) return;
+    
     try {
-      final result = await InternetAddress.lookup(
-        'google.com',
-      ).timeout(const Duration(seconds: 2)); // Reduced timeout
+      final result = await InternetAddress.lookup('google.com')
+          .timeout(const Duration(milliseconds: 1500)); // Reduced from 2s
 
-      if (mounted) {
-        setState(() {
-          _hasInternet = result.isNotEmpty && result[0].rawAddress.isNotEmpty;
-        });
+      if (_disposed) return;
+      
+      final hasInternet = result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+      if (mounted && _hasInternet != hasInternet) {
+        setState(() => _hasInternet = hasInternet);
       }
     } catch (e) {
-      if (mounted) {
+      if (_disposed) return;
+      if (mounted && _hasInternet) {
         setState(() => _hasInternet = false);
       }
     }
   }
 
   void _setupPeriodicNetworkCheck() {
+    if (_disposed) return;
     _networkTimer = Timer.periodic(
-      const Duration(seconds: 5),
+      const Duration(seconds: 8), // Increased from 5s to reduce overhead
       (_) => _checkNetworkConnection(),
     );
   }
@@ -137,62 +183,59 @@ class _OnboardingPageState extends State<OnboardingPage>
     }
 
     setState(() => _isLoading = true);
-    nextScreenNavigator(_selectedUserType!);
+    nextScreenNavigator(_selectedUserType!, _selectedUserId!);
   }
 
   IconData _getUserTypeIcon(String userType) {
-    // Use a map for better performance
-    const iconMap = {
-      'Super Admin': Icons.admin_panel_settings,
-      'Cashier': Icons.point_of_sale,
-      'Stockist': Icons.inventory_2,
-      'Steward': Icons.room_service,
-      'Cowgirl': Icons.person,
-      'Store Keeper': Icons.store,
-    };
-
-    return iconMap[userType] ?? Icons.person_outline;
+    return _iconMap[userType] ?? Icons.person_outline;
   }
 
-  void nextScreenNavigator(String userType) async {
+  void nextScreenNavigator(String userType, int userRole) async {
+    if (_disposed) return;
+    
     try {
-      // Reduced delay for better UX
-      await Future.delayed(const Duration(milliseconds: 200));
+      // Remove artificial delay for faster navigation
+      // await Future.delayed(const Duration(milliseconds: 200));
 
       // Navigate based on user type
       final users selectedRole = stringToUser(userType);
-      await preferences.updateUserRole(userType);
-      userData.copyWith(userRole:userType);
-      if (selectedRole == users.cashier) {
-        if (mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => CashierLoginPage()),
-          );
-        }
-      } else if (selectedRole == users.stockist) {
-        if (mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => StockistMainScreen()),
-          );
-        }
-      } else {
+      
+      // Update preferences in parallel
+      await Future.wait([
+        preferences.updateUserRole(userType),
+        preferences.updateUserRoleId(userRole),
+      ]);
+      
+      userData.copyWith(userRole: userType);
+      
+      if (_disposed || !mounted) return;
+
+     
+      
+      
+      if (selectedRole == users.cashier||selectedRole == users.stockist) {
+         Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => LoginPage()),
+        );
+      
+      } 
+       else {
         ToastService.showInfo(
           'Welcome! Please contact support for account setup.',
         );
+        if (mounted) setState(() => _isLoading = false);
       }
     } catch (e) {
+      if (_disposed) return;
       ToastService.showError('Something went wrong. Please try again.$e');
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   void dispose() {
+    _disposed = true;
     _networkTimer?.cancel();
     _animationController.dispose();
     super.dispose();
@@ -205,13 +248,12 @@ class _OnboardingPageState extends State<OnboardingPage>
         height: MediaQuery.of(context).size.height,
         color: BarPOSTheme.secondaryDark,
         child: SafeArea(
-          child:
-              _isInitialized
-                  ? FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: _buildContent(),
-                  )
-                  : _buildLoadingState(),
+          child: _isInitialized
+              ? FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: _buildContent(),
+                )
+              : _buildLoadingState(),
         ),
       ),
     );
@@ -416,8 +458,7 @@ class _OnboardingPageState extends State<OnboardingPage>
       width: double.infinity,
       height: 50,
       child: ElevatedButton(
-        onPressed:
-            (_isLoading || _selectedUserType == null) ? null : _handleContinue,
+        onPressed: (_isLoading || _selectedUserType == null) ? null : _handleContinue,
         style: ElevatedButton.styleFrom(
           backgroundColor: BarPOSTheme.successColor,
           foregroundColor: Colors.white,
@@ -427,20 +468,19 @@ class _OnboardingPageState extends State<OnboardingPage>
           elevation: 2,
           disabledBackgroundColor: Colors.grey.shade300,
         ),
-        child:
-            _isLoading
-                ? const SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
-                : const Text(
-                  'Continue',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        child: _isLoading
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
+              )
+            : const Text(
+                'Continue',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
       ),
     );
   }
@@ -461,38 +501,37 @@ class _OnboardingPageState extends State<OnboardingPage>
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () async {
-            setState(() => _selectedUserType = user.name);
-            await preferences.updateUserRole(_selectedUserType!);
+          onTap: () {
+            // Remove async operations from tap for immediate response  
+            setState(() {
+              _selectedUserType = user.name;
+              _selectedUserId = user.id;
+            });
+            // Defer preference saving until continue is pressed for better UX
+            // This makes selection feel instant
+            _deferredUpdatePreferences(user.name, user.id);
           },
           borderRadius: BorderRadius.circular(12),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
+            duration: const Duration(milliseconds: 100), // Reduced from 150ms
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color:
-                    isSelected
-                        ? BarPOSTheme.successColor
-                        : Colors.grey.shade300,
+                color: isSelected ? BarPOSTheme.successColor : Colors.grey.shade300,
                 width: isSelected ? 2 : 1,
               ),
-              color:
-                  isSelected
-                      ? BarPOSTheme.successColor.withOpacity(0.1)
-                      : Colors.grey.shade50,
+              color: isSelected
+                  ? BarPOSTheme.successColor.withOpacity(0.1)
+                  : Colors.grey.shade50,
             ),
             child: Row(
               children: [
                 AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
+                  duration: const Duration(milliseconds: 100), // Reduced from 150ms
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color:
-                        isSelected
-                            ? BarPOSTheme.successColor
-                            : Colors.grey.shade400,
+                    color: isSelected ? BarPOSTheme.successColor : Colors.grey.shade400,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -511,20 +550,19 @@ class _OnboardingPageState extends State<OnboardingPage>
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color:
-                              isSelected
-                                  ? BarPOSTheme.successColor
-                                  : Colors.black87,
+                          color: isSelected ? BarPOSTheme.successColor : Colors.black87,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        user.description ?? '',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade600,
+                      if (user.description?.isNotEmpty == true) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          user.description!,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade600,
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -540,5 +578,22 @@ class _OnboardingPageState extends State<OnboardingPage>
         ),
       ),
     );
+  }
+
+  // Deferred preference update to avoid blocking UI
+  void _deferredUpdatePreferences(String userType, int userId) {
+    Future.microtask(() async {
+      if (!_disposed) {
+        try {
+          await Future.wait([
+            preferences.updateUserRole(userType),
+            preferences.updateUserRoleId(userId),
+          ]);
+        } catch (e) {
+          // Silent fail - preferences will be updated on continue anyway
+          print('Deferred preference update failed: $e');
+        }
+      }
+    });
   }
 }

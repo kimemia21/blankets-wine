@@ -13,21 +13,32 @@ class BnwDatabase extends _$BnwDatabase {
   BnwDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
+      // This will drop and recreate all tables
+      beforeOpen: (details) async {
+        // Enable foreign keys
+        await customStatement('PRAGMA foreign_keys = ON');
+      },
       onCreate: (Migrator m) async {
+        // Create all tables
         await m.createAll();
-        // Insert default categories if needed
-        // await _insertDefaultCategories();
       },
       onUpgrade: (Migrator m, int from, int to) async {
-        // Handle future schema upgrades here
+        // Recreate approach: Drop and recreate the Products table
+        if (from < 2) {
+          // Drop the Products table (this will lose all data)
+          await m.drop(products);
+          // Recreate the Products table with new schema
+          await m.create(products);
+        }
       },
     );
   }
+}
 
   // // Insert some default categories
   // Future<void> _insertDefaultCategories() async {
@@ -45,7 +56,7 @@ class BnwDatabase extends _$BnwDatabase {
   //     );
   //   }
   // }
-}
+
 
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {

@@ -4,10 +4,13 @@ import 'package:blankets_and_wines/blankets_and_wines.dart';
 import 'package:blankets_and_wines_example/core/constants.dart';
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
 import 'package:blankets_and_wines_example/core/utils/initializers.dart';
+import 'package:blankets_and_wines_example/core/utils/sdkinitializer.dart';
 import 'package:blankets_and_wines_example/features/cashier/functions/fetchDrinks.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:socket_io_client/socket_io_client.dart';
 
 class Payments {
   // M-Pesa Payment Method
@@ -466,11 +469,39 @@ class Payments {
   static processPayment(String orderNumber) async {
     print("Processing sale with order number: $orderNumber");
 
-
     try {
       double subtotal = cartG.total;
 
       double tax = cartG.total - subtotal;
+
+      print("Connecting to socket server...");
+      // print("userId: ${currentUser.userId}");
+
+      Socket emitEv = IO.io(
+        'ws://167.99.15.36:8080',
+        IO.OptionBuilder()
+            .setTransports(['websocket'])
+            .enableAutoConnect()
+            .enableReconnection()
+            .setReconnectionAttempts(10)
+            .setReconnectionDelay(1000)
+            .build(),
+      );
+
+      emitEv.onConnect((_) {
+        print('Connected to server');
+
+        // Now emit after connected
+        emitEv.emit('order_created', {"barId": appUser.barId});
+      });
+        emitEv.onError((error) {
+        print('Socket error: $error');
+      });
+
+      emitEv.onDisconnect((_) {
+        print('Disconnected from server');
+      });
+     sdkInitializer();
 
       await SmartposPlugin.printReceipt({
         "storeName": "Blankets Bar",
@@ -492,6 +523,9 @@ class Payments {
         "total": cartG.total.toStringAsFixed(2),
         "paymentMethod": "Mpesa",
       });
+
+      emitEv.dispose();
+
     } catch (e) {
       print("Error printing receipt: $e");
     }
@@ -541,19 +575,15 @@ class Payments {
         "orderNo": orderId,
         "mpesaNo": phoneNumber,
         "amount": amount.toString(),
-      }).then((p0){
+      }).then((p0) {
         processPayment(orderId);
-       Navigator.of(dialogContext).pop();
-
+        Navigator.of(dialogContext).pop();
       });
-
-
-      
 
       // Close dialog safely
     } catch (error) {
       //  processPayment(orderId);
-       
+
       // Close dialog safely
       // if (dialogContext != null) {
       //   Navigator.of(dialogContext).pop();

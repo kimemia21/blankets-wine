@@ -12,10 +12,6 @@ class ProductsDao extends DatabaseAccessor<BnwDatabase> with _$ProductsDaoMixin 
   // Get all products
   Future<List<Product>> getAllProducts() => select(products).get();
 
-  // Get active products only
-  Future<List<Product>> getActiveProducts() =>
-      (select(products)..where((p) => p.isActive.equals(true))).get();
-
   // Get product by id
   Future<Product?> getProductById(int id) =>
       (select(products)..where((p) => p.id.equals(id))).getSingleOrNull();
@@ -23,6 +19,14 @@ class ProductsDao extends DatabaseAccessor<BnwDatabase> with _$ProductsDaoMixin 
   // Get products by category
   Future<List<Product>> getProductsByCategory(int categoryId) =>
       (select(products)..where((p) => p.productCategory.equals(categoryId))).get();
+
+  // Get products with low stock (below reorder level)
+  Future<List<Product>> getLowStockProducts() =>
+      (select(products)..where((p) => p.stock.isSmallerThan(p.reorder))).get();
+
+  // Get out of stock products
+  Future<List<Product>> getOutOfStockProducts() =>
+      (select(products)..where((p) => p.stock.equals(0))).get();
 
   // Get products with category info (JOIN)
   Future<List<ProductWithCategory>> getProductsWithCategory() {
@@ -50,14 +54,19 @@ class ProductsDao extends DatabaseAccessor<BnwDatabase> with _$ProductsDaoMixin 
   Future<bool> updateProduct(Product product) =>
       update(products).replace(product);
 
+  // Update product stock
+  Future<int> updateProductStock(int id, int newStock) =>
+      (update(products)..where((p) => p.id.equals(id)))
+          .write(ProductsCompanion(stock: Value(newStock)));
+
+  // Update reorder level
+  Future<int> updateReorderLevel(int id, int reorderLevel) =>
+      (update(products)..where((p) => p.id.equals(id)))
+          .write(ProductsCompanion(reorder: Value(reorderLevel)));
+
   // Delete product
   Future<int> deleteProduct(int id) =>
       (delete(products)..where((p) => p.id.equals(id))).go();
-
-  // Toggle product active status
-  Future<int> toggleProductStatus(int id, bool isActive) =>
-      (update(products)..where((p) => p.id.equals(id)))
-          .write(ProductsCompanion(isActive: Value(isActive)));
 
   // Watch all products (for real-time updates)
   Stream<List<Product>> watchAllProducts() => select(products).watch();
@@ -65,7 +74,13 @@ class ProductsDao extends DatabaseAccessor<BnwDatabase> with _$ProductsDaoMixin 
   // Watch products by category
   Stream<List<Product>> watchProductsByCategory(int categoryId) =>
       (select(products)..where((p) => p.productCategory.equals(categoryId))).watch();
+
+  // Watch low stock products
+  Stream<List<Product>> watchLowStockProducts() =>
+      (select(products)..where((p) => p.stock.isSmallerThan(p.reorder))).watch();
 }
+
+
 
 // Custom class for joined data
 class ProductWithCategory {
