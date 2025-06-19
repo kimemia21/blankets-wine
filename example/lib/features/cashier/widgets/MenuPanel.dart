@@ -1,26 +1,26 @@
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
 import 'package:blankets_and_wines_example/data/models/Category.dart';
-import 'package:blankets_and_wines_example/data/models/DrinkItem.dart';
-import 'package:blankets_and_wines_example/features/cashier/functions/fetchDrinks.dart';
+import 'package:blankets_and_wines_example/data/models/Product.dart';
+import 'package:blankets_and_wines_example/data/models/ProductCategory.dart';
 import 'package:blankets_and_wines_example/features/cashier/models/CartItems.dart';
 import 'package:blankets_and_wines_example/features/cashier/widgets/DrinkItemCard.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class MenuPanel extends StatelessWidget {
-  final Future<List<DrinkItem>> drinks;
+  final Future<List<ProductCategory>> productsWithCat;
   final String selectedCategory;
   final String searchQuery;
   final TextEditingController searchController;
   final List<CartItem> cart;
   final Function(String) onCategoryChanged;
   final Function(String) onSearchChanged;
-  final Function(DrinkItem) onAddToCart;
-  final Function( String orderId) printOrder;
+  final Function(Product) onAddToCart;
+  final VoidCallback onRefresh;
 
   const MenuPanel({
     Key? key,
-    required this.drinks,
+    required this.productsWithCat,
     required this.selectedCategory,
     required this.searchQuery,
     required this.searchController,
@@ -28,7 +28,7 @@ class MenuPanel extends StatelessWidget {
     required this.onCategoryChanged,
     required this.onSearchChanged,
     required this.onAddToCart,
-    required this.printOrder,
+    required this.onRefresh,
   }) : super(key: key);
 
   int getGridCount(BuildContext context) {
@@ -52,7 +52,7 @@ class MenuPanel extends StatelessWidget {
             child: TextField(
               controller: searchController,
               decoration: InputDecoration(
-                hintText: 'Search drinks...',
+                hintText: 'Search products...',
                 prefixIcon: Icon(Icons.search, size: 32),
               ),
               onChanged: onSearchChanged,
@@ -63,10 +63,8 @@ class MenuPanel extends StatelessWidget {
           Container(
             height: BarPOSTheme.buttonHeight,
             margin: EdgeInsets.only(bottom: BarPOSTheme.spacingL),
-            child: FutureBuilder<List<DrinnksCategory>>(
-              future: CashierFunctions.fetchCategories(
-                'ecom/categories',
-              ), // Replace with your actual endpoint
+            child: FutureBuilder<List<ProductCategory>>(
+              future: productsWithCat,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Center(
@@ -98,14 +96,34 @@ class MenuPanel extends StatelessWidget {
 
                 return ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  itemCount: categories.length,
+                  itemCount: categories.length + 1, // +1 for "All" category
                   itemBuilder: (context, index) {
-                    final category = categories[index];
-                    final isSelected = selectedCategory == category.name;
+                    if (index == 0) {
+                      // "All" category button
+                      final isSelected = selectedCategory == 'All';
+                      return Container(
+                        margin: EdgeInsets.only(right: BarPOSTheme.spacingS),
+                        child: ElevatedButton(
+                          onPressed: () => onCategoryChanged('All'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                isSelected
+                                    ? BarPOSTheme.buttonColor
+                                    : BarPOSTheme.accentDark,
+                            foregroundColor: BarPOSTheme.primaryText,
+                            textStyle: BarPOSTheme.categoryTextStyle,
+                          ),
+                          child: Text('All'),
+                        ),
+                      );
+                    }
+                    
+                    final category = categories[index - 1];
+                    final isSelected = selectedCategory == category.categoryId.toString();
                     return Container(
                       margin: EdgeInsets.only(right: BarPOSTheme.spacingS),
                       child: ElevatedButton(
-                        onPressed: () => onCategoryChanged(category.name),
+                        onPressed: () => onCategoryChanged(category.categoryId.toString()),
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
                               isSelected
@@ -114,7 +132,7 @@ class MenuPanel extends StatelessWidget {
                           foregroundColor: BarPOSTheme.primaryText,
                           textStyle: BarPOSTheme.categoryTextStyle,
                         ),
-                        child: Text(category.name),
+                        child: Text(category.categoryName),
                       ),
                     );
                   },
@@ -123,89 +141,126 @@ class MenuPanel extends StatelessWidget {
             ),
           ),
 
-          // Drinks Grid
+          // Products Grid with RefreshIndicator
           Expanded(
-            child: FutureBuilder<List<DrinkItem>>(
-              future: drinks,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(
-                    child: CircularProgressIndicator(
-                      color: BarPOSTheme.buttonColor,
-                    ),
-                  );
-                }
-
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 48,
-                          color: BarPOSTheme.errorColor,
-                        ),
-                        SizedBox(height: BarPOSTheme.spacingM),
-                        Text(
-                          'Error loading drinks',
-                          style: TextStyle(color: BarPOSTheme.errorColor),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            // This would need to be handled by parent widget
-                            // or passed as a callback
-                          },
-                          child: Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Center(
-                    child: Text(
-                      'No drinks available',
-                      style: TextStyle(color: BarPOSTheme.secondaryText),
-                    ),
-                  );
-                }
-
-                final filteredDrinksList =
-                    snapshot.data!.where((drink) {
-                      bool categoryMatch =
-                          selectedCategory == 'All' ||
-                          drink.categoryId == selectedCategory;
-                      bool searchMatch = drink.name.toLowerCase().contains(
-                        searchQuery.toLowerCase(),
-                      );
-                      return categoryMatch && searchMatch;
-                    }).toList();
-
-                return GridView.builder(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: getGridCount(context),
-                    crossAxisSpacing: BarPOSTheme.spacingM,
-                    mainAxisSpacing: BarPOSTheme.spacingM,
-                    childAspectRatio: 0.85,
-                  ),
-                  itemCount: filteredDrinksList.length,
-                  itemBuilder: (context, index) {
-                    final drink = filteredDrinksList[index];
-                    final cartItem = cart.firstWhere(
-                      (item) => item.drink.id == drink.id,
-                      orElse: () => CartItem(drink: drink, quantity: 0),
-                    );
-
-                    return DrinkItemCard(
-                      drink: drink,
-                      cartQuantity: cartItem.quantity,
-                      onTap: () => onAddToCart(drink),
-                    );
-                  },
-                );
+            child: RefreshIndicator(
+              onRefresh: () async {
+                onRefresh();
+                // Add a small delay to allow the parent to update the Future
+                await Future.delayed(Duration(milliseconds: 100));
               },
+              color: BarPOSTheme.buttonColor,
+              backgroundColor: BarPOSTheme.accentDark,
+              child: FutureBuilder<List<ProductCategory>>(
+                future: productsWithCat,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(
+                      child: CircularProgressIndicator(
+                        color: BarPOSTheme.buttonColor,
+                      ),
+                    );
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            size: 48,
+                            color: BarPOSTheme.errorColor,
+                          ),
+                          SizedBox(height: BarPOSTheme.spacingM),
+                          Text(
+                            'Error loading products',
+                            style: TextStyle(color: BarPOSTheme.errorColor),
+                          ),
+                          TextButton(
+                            onPressed: onRefresh,
+                            child: Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return SingleChildScrollView(
+                      physics: AlwaysScrollableScrollPhysics(),
+                      child: Container(
+                        height: MediaQuery.of(context).size.height * 0.5,
+                        child: Center(
+                          child: Text(
+                            'No products available',
+                            style: TextStyle(color: BarPOSTheme.secondaryText),
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  // Flatten all products from all categories
+                  final allProducts = <Product>[];
+                  for (final category in snapshot.data!) {
+                    allProducts.addAll(category.products);
+                  }
+
+                  // Filter products based on selected category and search query
+                  final filteredProducts = allProducts.where((product) {
+                    bool categoryMatch = selectedCategory == 'All' ||
+                        snapshot.data!.any((cat) => 
+                            cat.categoryId.toString() == selectedCategory && 
+                            cat.products.contains(product));
+                    
+                    bool searchMatch = product.name.toLowerCase().contains(
+                      searchQuery.toLowerCase(),
+                    );
+                    
+                    return categoryMatch && searchMatch;
+                  }).toList();
+
+                  if (filteredProducts.isEmpty) {
+                    return SingleChildScrollView(
+                      physics: AlwaysScrollableScrollPhysics(),
+                      child: Container(
+                        height: MediaQuery.of(context).size.height * 0.5,
+                        child: Center(
+                          child: Text(
+                            'No products found',
+                            style: TextStyle(color: BarPOSTheme.secondaryText),
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return GridView.builder(
+                    physics: AlwaysScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: getGridCount(context),
+                      crossAxisSpacing: BarPOSTheme.spacingM,
+                      mainAxisSpacing: BarPOSTheme.spacingM,
+                      childAspectRatio: 0.85,
+                    ),
+                    itemCount: filteredProducts.length,
+                    itemBuilder: (context, index) {
+                      final product = filteredProducts[index];
+                      final cartItem = cart.firstWhere(
+                        (item) => item.drink.id == product.id,
+                        orElse: () => CartItem(drink: product, quantity: 0),
+                      );
+
+                      return DrinkItemCard(
+                        drink: product,
+                        cartQuantity: cartItem.quantity,
+                        onTap: () => onAddToCart(product),
+                      );
+                    },
+                  );
+                },
+              ),
             ),
           ),
         ],

@@ -10,6 +10,11 @@ class ToastService {
   static Size? _cachedScreenSize;
   static bool? _cachedIsDark;
   
+  // Navigation safety guards
+  static bool _isNavigating = false;
+  static final List<Flushbar> _activeToasts = [];
+  static const int _maxConcurrentToasts = 3;
+  
   /// Initialize the ToastService with a navigator key
   /// Call this in your MaterialApp: navigatorKey: ToastService.navigatorKey
   static GlobalKey<NavigatorState> get navigatorKey => _navigatorKey;
@@ -95,6 +100,12 @@ class ToastService {
       return;
     }
 
+    // Check if we're already navigating or have too many active toasts
+    if (_isNavigating || _activeToasts.length >= _maxConcurrentToasts) {
+      debugPrint('ToastService: Skipping toast - navigation in progress or too many active toasts');
+      return;
+    }
+
     // Cache theme and screen info for performance
     final theme = Theme.of(context);
     final screenSize = MediaQuery.of(context).size;
@@ -122,7 +133,7 @@ class ToastService {
     );
   }
 
-  /// Helper method to show custom toast
+  /// Helper method to show custom toast with navigation safety
   static void _showCustomToast({
     required BuildContext context,
     required String message,
@@ -136,7 +147,10 @@ class ToastService {
     // Calculate responsive width - cached for performance
     final toastWidth = _calculateToastWidth(_cachedScreenSize!);
     
-    Flushbar(
+    // Declare flushbar variable first
+    late Flushbar flushbar;
+    
+    flushbar = Flushbar(
       maxWidth: toastWidth,
       messageText: Text(
         message,
@@ -168,7 +182,38 @@ class ToastService {
       dismissDirection: FlushbarDismissDirection.VERTICAL,
       forwardAnimationCurve: Curves.easeOutQuart,
       reverseAnimationCurve: Curves.easeInQuart,
-    ).show(context);
+      // Add safety callbacks
+      onStatusChanged: (FlushbarStatus? status) {
+        switch (status) {
+          case FlushbarStatus.SHOWING:
+            _activeToasts.add(flushbar);
+            break;
+          case FlushbarStatus.DISMISSED:
+            _activeToasts.remove(flushbar);
+            _isNavigating = false;
+            break;
+          case FlushbarStatus.IS_APPEARING:
+            _isNavigating = true;
+            break;
+          case FlushbarStatus.IS_HIDING:
+            _isNavigating = true;
+            break;
+          default:
+            break;
+        }
+      },
+    );
+
+    // Safety check before showing
+    if (!_isNavigating && _activeToasts.length < _maxConcurrentToasts) {
+      try {
+        flushbar.show(context);
+      } catch (e) {
+        debugPrint('ToastService: Error showing toast - $e');
+        _isNavigating = false;
+        _activeToasts.remove(flushbar);
+      }
+    }
   }
 
   /// Get toast colors based on type - optimized with const colors
@@ -215,6 +260,22 @@ class ToastService {
     }
   }
 
+  /// Dismiss all active toasts safely
+  static void dismissAll() {
+    if (_isNavigating) return;
+    
+    final toastsCopy = List<Flushbar>.from(_activeToasts);
+    for (final toast in toastsCopy) {
+      try {
+        toast.dismiss();
+      } catch (e) {
+        debugPrint('ToastService: Error dismissing toast - $e');
+      }
+    }
+    _activeToasts.clear();
+    _isNavigating = false;
+  }
+
   /// Clear any cached values (call this if theme changes)
   static void clearCache() {
     _cachedTheme = null;
@@ -222,8 +283,20 @@ class ToastService {
     _cachedIsDark = null;
   }
 
+  /// Reset the service state
+  static void reset() {
+    dismissAll();
+    clearCache();
+  }
+
   /// Check if toast service is properly initialized
   static bool get isInitialized => _context != null;
+  
+  /// Get the number of active toasts
+  static int get activeToastCount => _activeToasts.length;
+  
+  /// Check if navigation is in progress
+  static bool get isNavigating => _isNavigating;
 }
 
 /// Helper class for toast colors

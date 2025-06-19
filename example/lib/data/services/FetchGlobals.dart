@@ -12,6 +12,7 @@ Future<List<T>> fetchGlobal<T>({
     if (response["success"]) {
       List data = response["rsp"]["data"];
       print(response);
+      print("debugData$data");
       return data.map((item) => fromJson(item)).toList();
     } else {
       ToastService.showError(response["rsp"]);

@@ -1,12 +1,13 @@
 import 'package:blankets_and_wines_example/data/models/DrinkItem.dart';
+import 'package:blankets_and_wines_example/data/models/Product.dart';
 
 class CartItem {
-  final DrinkItem drink;
+  final Product drink;
   int quantity;
 
   CartItem({required this.drink, this.quantity = 1});
 
-  double get totalPrice => drink.price * quantity;
+  double get totalPrice =>  drink.price.toDouble() * quantity;
 
   Map<String, dynamic> toJson() {
     return {

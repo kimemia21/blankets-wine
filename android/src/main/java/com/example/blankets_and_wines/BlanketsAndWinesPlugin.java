@@ -468,7 +468,7 @@ private EditText scanResultEditText;
                 headerFormat.setFont(PrnTextFont.SANS_SERIF);
                 
                 PrnStrFormat subHeaderFormat = new PrnStrFormat();
-                subHeaderFormat.setTextSize(35);
+                subHeaderFormat.setTextSize(30 );
                 subHeaderFormat.setAli(Layout.Alignment.ALIGN_CENTER);
                 subHeaderFormat.setStyle(PrnTextStyle.BOLD);
                 subHeaderFormat.setFont(PrnTextFont.SANS_SERIF);
@@ -486,7 +486,7 @@ private EditText scanResultEditText;
                 boldFormat.setAli(Layout.Alignment.ALIGN_NORMAL);
                 
                 PrnStrFormat orderNumberFormat = new PrnStrFormat();
-                orderNumberFormat.setTextSize(60);
+                orderNumberFormat.setTextSize(40);
                 orderNumberFormat.setAli(Layout.Alignment.ALIGN_CENTER);
                 orderNumberFormat.setStyle(PrnTextStyle.BOLD);
                 orderNumberFormat.setFont(PrnTextFont.SANS_SERIF);
@@ -514,7 +514,7 @@ private EditText scanResultEditText;
                 // Print receipt title
                 mPrinter.setPrintAppendString("SALE RECEIPT", subHeaderFormat);
                 mPrinter.setPrintAppendString("", normalFormat); // Empty line
-                
+                                                                                                                
                 // Print date and time
                 String date = (String) receiptData.get("date");
                 String time = (String) receiptData.get("time");

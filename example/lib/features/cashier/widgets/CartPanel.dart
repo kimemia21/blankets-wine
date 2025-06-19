@@ -23,7 +23,7 @@ class CartPanel extends StatefulWidget {
   final VoidCallback onClearCart;
   final VoidCallback onShowPayment;
   final VoidCallback onCloseCart;
-  final Function(String orderId) printOrder;
+
 
   const CartPanel({
     Key? key,
@@ -34,7 +34,7 @@ class CartPanel extends StatefulWidget {
     required this.onClearCart,
     required this.onShowPayment,
     required this.onCloseCart,
-    required this.printOrder,
+
   }) : super(key: key);
 
   @override
@@ -165,133 +165,6 @@ class _CartPanelState extends State<CartPanel> {
   }
 
   // ============ M-PESA PAYMENT ============
-
-  void _showMpesaPayment(BuildContext context) {
-    final TextEditingController phoneController = TextEditingController();
-    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
-
-    Navigator.of(context).pop(); // Close payment options dialog
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
-          child: AlertDialog(
-            title: Row(
-              children: [
-                Icon(Icons.phone_android, color: Colors.green, size: 28),
-                SizedBox(width: 12),
-                Text('M-Pesa Payment'),
-              ],
-            ),
-            content: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Amount to Pay: KSHS ${formatWithCommas(_calculatedTotal.toStringAsFixed(0))}',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: BarPOSTheme.successColor,
-                    ),
-                  ),
-                  SizedBox(height: 20),
-                  Text(
-                    'Enter Phone Number:',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
-                  SizedBox(height: 8),
-                  TextFormField(
-                    controller: phoneController,
-                    keyboardType: TextInputType.phone,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(10),
-                    ],
-                    decoration: InputDecoration(
-                      prefixStyle: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.green, width: 2),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter phone number';
-                      }
-                      if (value.length < 9) {
-                        return 'Please enter a valid phone number';
-                      }
-                      if (!value.startsWith('07') && !value.startsWith('01')) {
-                        return 'Phone number must start with 07 or 01';
-                      }
-                      return null;
-                    },
-                  ),
-                  SizedBox(height: 16),
-                  Container(
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.green.withOpacity(0.3)),
-                    ),
-                    child: Text(
-                      'You will receive an M-Pesa prompt on your phone. Enter your M-Pesa PIN to complete the transaction.',
-                      style: TextStyle(fontSize: 14, color: Colors.green[700]),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-
-                  _onPaymentComplete(false, null);
-                },
-                child: Text(
-                  'Cancel',
-                  style: TextStyle(color: BarPOSTheme.errorColor),
-                ),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  if (formKey.currentState!.validate()) {
-                    Navigator.of(context).pop();
-
-                    _processMpesaPayment(
-                      context: context,
-                      phoneNumber: phoneController.text,
-                      amount: _calculatedTotal,
-                      orderId: orderNumber,
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                ),
-                child: Text('Send Payment Request'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   // ============ CASH PAYMENT ============
 
@@ -443,248 +316,632 @@ class _CartPanelState extends State<CartPanel> {
   }
 
   // ============ PAYMENT PROCESSING ============
-void _processMpesaPayment({
-  required BuildContext context,
-  required String phoneNumber,
-  required double amount,
-  required String orderId,
-}) async {
-  final scaffoldMessenger = ScaffoldMessenger.of(context);
-  BuildContext? dialogContext;
-  bool isCancelled = false;
-
-  // Show processing dialog with cancel button first
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (BuildContext context) {
-      dialogContext = context;
-      return AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(color: Colors.green),
-            SizedBox(height: 16),
-            Text('Sending M-Pesa request...'),
-            SizedBox(height: 8),
-            Text(
-              'Please check your phone for the M-Pesa prompt',
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 8),
-            Text(
-              'This will timeout in 15 seconds if no response',
-              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              isCancelled = true;
-              Navigator.of(context).pop();
-              ToastService.showError("Payment cancelled");
-              _onPaymentComplete(false, null);
-            },
-            child: Text('Cancel', style: TextStyle(color: Colors.red)),
+  // Helper method for instruction steps
+  Widget _buildInstructionStep(String number, String instruction) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: Colors.blue[600],
+            shape: BoxShape.circle,
           ),
-        ],
-      );
-    },
-  );
+          child: Center(
+            child: Text(
+              number,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+        SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            instruction,
+            style: TextStyle(
+              fontSize: 15,
+              color: Colors.blue[600],
+              height: 1.3,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
-  try {
-    // Start the API call after dialog is shown
-    await CashierFunctions.payOrder({
-      "orderNo": orderId,
-      "mpesaNo": phoneNumber,
-      "amount": amount.toString(),
-    }).timeout(
-      Duration(seconds: 15),
-      onTimeout: () {
-        throw TimeoutException(
-          'Payment request timed out',
-          Duration(seconds: 15),
+  // Replace the _showMpesaPayment method and add these new methods to your CartPanel class
+  void _showMpesaPayment(BuildContext context) {
+    final TextEditingController phoneController = TextEditingController();
+    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+
+    Navigator.of(context).pop(); // Close payment options dialog
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
+              child: AlertDialog(
+                title: Row(
+                  children: [
+                    Icon(Icons.phone_android, color: Colors.green, size: 28),
+                    SizedBox(width: 12),
+                    Text('M-Pesa Payment'),
+                  ],
+                ),
+                content: Container(
+                  width: MediaQuery.of(context).size.width * 0.85,
+                  constraints: BoxConstraints(
+                    maxWidth: 600,
+                    minWidth: 400,
+                    maxHeight: MediaQuery.of(context).size.height * 0.8,
+                  ),
+                  child: SingleChildScrollView(
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Order Details Section
+                          Container(
+                            padding: EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.green.withOpacity(0.3),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Order Details',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green[700],
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text('Order Number:'),
+                                    Text(
+                                      orderNumber,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 4),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text('Amount:'),
+                                    Text(
+                                      'KSHS ${formatWithCommas(_calculatedTotal.toStringAsFixed(0))}',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.green[700],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          SizedBox(height: 20),
+
+                          // Phone Number Section
+                          Text(
+                            'Enter Phone Number:',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          TextFormField(
+                            controller: phoneController,
+                            keyboardType: TextInputType.phone,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(10),
+                            ],
+                            decoration: InputDecoration(
+                              hintText: '0712345678',
+                              // prefixText: '+254 ',
+                              prefixStyle: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: Colors.green,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter phone number';
+                              }
+                              if (value.length != 10 && value.length < 10) {
+                                return 'Phone number must be 10 digits';
+                              }
+                              if (!value.startsWith('07') &&
+                                  !value.startsWith('01')) {
+                                return 'Phone number must start with 07 or 01';
+                              }
+                              return null;
+                            },
+                            onChanged: (value) {
+                              setDialogState(() {}); // Refresh dialog state
+                            },
+                          ),
+
+                          SizedBox(height: 20),
+
+                          // Action Buttons Section
+                          Column(
+                            children: [
+                              // Send Prompt Button
+                              SizedBox(
+                                width: double.infinity,
+                                height: 60,
+                                child: ElevatedButton.icon(
+                                  onPressed:
+                                      phoneController.text.length >= 9
+                                          ? () => _sendMpesaPrompt(
+                                            context,
+                                            phoneController.text,
+                                            setDialogState,
+                                          )
+                                          : null,
+                                  icon: Icon(Icons.send),
+                                  label: Text('Send M-Pesa Prompt'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              SizedBox(height: 12),
+
+                              // Confirm Payment Button
+                              SizedBox(
+                                width: double.infinity,
+                                height: 60,
+                                child: ElevatedButton.icon(
+                                  onPressed:
+                                      phoneController.text.length >= 9
+                                          ? () => _confirmMpesaPayment(
+                                            context,
+                                            phoneController.text,
+                                            setDialogState,
+                                          )
+                                          : null,
+                                  icon: Icon(Icons.check_circle),
+                                  label: Text('Confirm Payment'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          SizedBox(height: 16),
+
+                          // Instructions
+                          Container(
+                            padding: EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: Colors.blue.withOpacity(0.3),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Payment Instructions:',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue[700],
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  '1. Click "Send M-Pesa Prompt" to initiate payment',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.blue[600],
+                                  ),
+                                ),
+                                Text(
+                                  '2. Check your phone for M-Pesa notification',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.blue[600],
+                                  ),
+                                ),
+                                Text(
+                                  '3. Enter your M-Pesa PIN on your phone',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.blue[600],
+                                  ),
+                                ),
+                                Text(
+                                  '4. Click "Confirm Payment" to complete transaction',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.blue[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                actions: [
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          // Don't clear cart or process payment on cancel
+                        },
+                        style: TextButton.styleFrom(
+                          backgroundColor: BarPOSTheme.errorColor.withOpacity(
+                            0.1,
+                          ),
+                          foregroundColor: BarPOSTheme.errorColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel Payment',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
-    
-    if (isCancelled) return;
-
-    // Close dialog
-    if (dialogContext != null && Navigator.canPop(dialogContext!)) {
-      Navigator.of(dialogContext!).pop();
-    }
-
-    // Payment confirmed - now print and emit
-    await _processPayment(orderId);
-    _onPaymentComplete(true, 'MPESA_${DateTime.now().millisecondsSinceEpoch}');
-
-  } on TimeoutException catch (e) {
-    if (isCancelled) return;
-    
-    if (dialogContext != null && Navigator.canPop(dialogContext!)) {
-      Navigator.of(dialogContext!).pop();
-    }
-    
-    ToastService.showError("Payment request timed out. Please try again.");
-    _onPaymentComplete(false, null);
-
-  } catch (error) {
-    if (isCancelled) return;
-    
-    if (dialogContext != null && Navigator.canPop(dialogContext!)) {
-      Navigator.of(dialogContext!).pop();
-    }
-    
-    scaffoldMessenger.showSnackBar(
-      SnackBar(content: Text('Payment failed: ${error.toString()}')),
-    );
-    _onPaymentComplete(false, null);
   }
-}
 
-Future<void> _processPayment(String orderNumber) async {
-  print("Processing sale with order number: $orderNumber");
+  // Method to send M-Pesa prompt
+  void _sendMpesaPrompt(
+    BuildContext context,
+    String phoneNumber,
+    StateSetter setDialogState,
+  ) async {
+    try {
+      setDialogState(() {
+        isLoading = true;
+      });
 
-  try {
-    double subtotal = cartG.total;
-    double tax = 0; // Tax calculation fixed
+      // Show loading state
+      ToastService.showInfo("Sending M-Pesa prompt to $phoneNumber...");
 
-    print("Connecting to socket server...");
+      // Here you would typically call an API to initiate the M-Pesa prompt
+      // For now, we'll simulate the API call
+      CashierFunctions.SendSdkPush({
+        "orderNo": orderNumber,
+        "mpesaNo": phoneNumber,
+        "amount": _calculatedTotal.toString(),
+      }).then((p0) {
+        setDialogState(() {
+          isLoading = false;
+        });
+      });
 
-    Socket emitEv = IO.io(
-      'ws://167.99.15.36:8080',
-      IO.OptionBuilder()
-          .setTransports(['websocket'])
-          .enableAutoConnect()
-          .enableReconnection()
-          .setReconnectionAttempts(10)
-          .setReconnectionDelay(1000)
-          .build(),
-    );
+      // ToastService.showSuccess("M-Pesa prompt sent! Check your phone.");
+    } catch (e) {
+      setDialogState(() {
+        isLoading = false;
+      });
+      ToastService.showError("Failed to send M-Pesa prompt: ${e.toString()}");
+    }
+  }
 
-    emitEv.onConnect((_) {
-      print('Connected to server');
-      emitEv.emit('order_created', {"barId": appUser.barId});
-    });
+  // Method to confirm M-Pesa payment
+  void _confirmMpesaPayment(
+    BuildContext context,
+    String phoneNumber,
+    StateSetter setDialogState,
+  ) async {
+    try {
+      setDialogState(() {
+        isLoading = true;
+      });
 
-    emitEv.onError((error) {
-      print('Socket error: $error');
-    });
+      // Show loading state
+      ToastService.showInfo("Confirming payment...");
 
-    emitEv.onDisconnect((_) {
-      print('Disconnected from server');
-    });
 
-    sdkInitializer();
+  
+      await CashierFunctions.confirmPayment(orderNumber).then((p0)async{
 
-    await SmartposPlugin.printReceipt({
-      "storeName": "Blankets Bar",
-      "date": DateFormat('yyyy-MM-dd').format(DateTime.now()),
-      "time": DateFormat('HH:mm:ss').format(DateTime.now()),
-      "orderNumber": orderNumber,
-      "items":
-          cartG.items
-              .map(
-                (item) => {
-                  "name": item.drink.name,
-                  "quantity": item.quantity,
-                  "price": item.totalPrice.toStringAsFixed(2),
+        setDialogState(() {
+        isLoading = false;
+      });
+
+      if (p0) {
+       Navigator.of(context).pop(); // Close the payment dialog
+       await _processPayment(orderNumber);
+       
+
+        // Clear cart and update UI
+        cartG.items.clear();
+        widget.onClearCart();
+
+        // Show final success dialog
+        _showPaymentSuccessDialog(context);
+      }
+      });
+
+
+  
+    } catch (e) {
+      setDialogState(() {
+        isLoading = false;
+      });
+      ToastService.showError("Payment confirmation failed: ${e.toString()}");
+    }
+  }
+
+  // Final success dialog
+  void _showPaymentSuccessDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(
+                Icons.check_circle,
+                color: BarPOSTheme.successColor,
+                size: 32,
+              ),
+              SizedBox(width: 12),
+              Text('Payment Completed!'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                'Order: $orderNumber',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Amount: KSHS ${formatWithCommas(_calculatedTotal.toStringAsFixed(0))}',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: BarPOSTheme.successColor,
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Receipt has been printed successfully.',
+                style: TextStyle(color: Colors.grey[600]),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          actions: [
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close success dialog
                 },
-              )
-              .toList(),
-      "subtotal": subtotal.toStringAsFixed(2),
-      "tax": tax.toStringAsFixed(2),
-      "total": cartG.total.toStringAsFixed(2),
-      "paymentMethod": "Mpesa",
-    });
-
-    emitEv.dispose();
-  } catch (e) {
-    print("Error printing receipt: $e");
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: BarPOSTheme.successColor,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: Text('Continue', style: TextStyle(fontSize: 16)),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
-}
 
-// ============ PAYMENT COMPLETION ============
+  Future<void> _processPayment(String orderNumber) async {
+    print("Processing sale with order number: $orderNumber");
 
-void _onPaymentComplete(bool success, String? transactionId) {
-  if (success) {
-    _showPaymentSuccess(context, transactionId);
-  } else {
-    _showPaymentError(context, 'Payment failed. Please try again.');
+    try {
+      double subtotal = cartG.total;
+      double tax = 0; // Tax calculation fixed
+
+      print("Connecting to socket server...");
+
+      Socket emitEv = IO.io(
+        'ws://167.99.15.36:8080',
+        IO.OptionBuilder()
+            .setTransports(['websocket'])
+            .enableAutoConnect()
+            .enableReconnection()
+            .setReconnectionAttempts(10)
+            .setReconnectionDelay(1000)
+            .build(),
+      );
+
+      emitEv.onConnect((_) {
+        print('Connected to server');
+        emitEv.emit('order_created', {"barId": appUser.barId});
+      });
+
+      emitEv.onError((error) {
+        print('Socket error: $error');
+      });
+
+      emitEv.onDisconnect((_) {
+        print('Disconnected from server');
+      });
+
+      sdkInitializer();
+
+      await SmartposPlugin.printReceipt({
+        "storeName": "Blankets Bar",
+        "date": DateFormat('yyyy-MM-dd').format(DateTime.now()),
+        "time": DateFormat('HH:mm:ss').format(DateTime.now()),
+        "orderNumber": orderNumber,
+        "items":
+            cartG.items
+                .map(
+                  (item) => {
+                    "name": item.drink.name,
+                    "quantity": item.quantity,
+                    "price": item.totalPrice.toStringAsFixed(2),
+                  },
+                )
+                .toList(),
+        "subtotal": subtotal.toStringAsFixed(2),
+        "tax": tax.toStringAsFixed(2),
+        "total": cartG.total.toStringAsFixed(2),
+        "paymentMethod": "Mpesa",
+      });
+
+      emitEv.dispose();
+    } catch (e) {
+      print("Error printing receipt: $e");
+    }
   }
-}
 
-void _showPaymentSuccess(BuildContext context, String? transactionId) {
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: Row(
-          children: [
-            Icon(
-              Icons.check_circle,
-              color: BarPOSTheme.successColor,
-              size: 28,
-            ),
-            SizedBox(width: 12),
-            Text('Payment Successful!'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Amount: KSHS ${formatWithCommas(_calculatedTotal.toStringAsFixed(0))}',
-            ),
-            if (transactionId != null) Text('Transaction ID: $transactionId'),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop(); // Close success dialog
-              cartG.items.clear(); // Clear the cart
-              widget.onClearCart(); // Call parent clear cart function
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: BarPOSTheme.successColor,
-            ),
-            child: Text('Continue'),
-          ),
-        ],
-      );
-    },
-  );
-}
+  // ============ PAYMENT COMPLETION ============
 
-void _showPaymentError(BuildContext context, String message) {
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.error, color: BarPOSTheme.errorColor, size: 28),
-            SizedBox(width: 12),
-            Text('Payment Failed'),
-          ],
-        ),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('OK'),
+  void _onPaymentComplete(bool success, String? transactionId) {
+    if (success) {
+      _showPaymentSuccess(context, transactionId);
+    } else {
+      _showPaymentError(context, 'Payment failed. Please try again.');
+    }
+  }
+
+  void _showPaymentSuccess(BuildContext context, String? transactionId) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(
+                Icons.check_circle,
+                color: BarPOSTheme.successColor,
+                size: 28,
+              ),
+              SizedBox(width: 12),
+              Text('Payment Successful!'),
+            ],
           ),
-        ],
-      );
-    },
-  );
-}
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Amount: KSHS ${formatWithCommas(_calculatedTotal.toStringAsFixed(0))}',
+              ),
+              if (transactionId != null) Text('Transaction ID: $transactionId'),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close success dialog
+                cartG.items.clear(); // Clear the cart
+                widget.onClearCart(); // Call parent clear cart function
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: BarPOSTheme.successColor,
+              ),
+              child: Text('Continue'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showPaymentError(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.error, color: BarPOSTheme.errorColor, size: 28),
+              SizedBox(width: 12),
+              Text('Payment Failed'),
+            ],
+          ),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   // ============ ORDER CREATION ============
 

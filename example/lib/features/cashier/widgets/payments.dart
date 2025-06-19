@@ -494,14 +494,14 @@ class Payments {
         // Now emit after connected
         emitEv.emit('order_created', {"barId": appUser.barId});
       });
-        emitEv.onError((error) {
+      emitEv.onError((error) {
         print('Socket error: $error');
       });
 
       emitEv.onDisconnect((_) {
         print('Disconnected from server');
       });
-     sdkInitializer();
+      sdkInitializer();
 
       await SmartposPlugin.printReceipt({
         "storeName": "Blankets Bar",
@@ -525,7 +525,6 @@ class Payments {
       });
 
       emitEv.dispose();
-
     } catch (e) {
       print("Error printing receipt: $e");
     }
@@ -541,15 +540,12 @@ class Payments {
     required Function(String orderId) printOrder,
   }) async {
     // Store context related values
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    var dialogContext;
 
     // Show processing dialog
     await showDialog(
       context: context,
       barrierDismissible: true,
       builder: (BuildContext context) {
-        dialogContext = context;
         return AlertDialog(
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -571,13 +567,14 @@ class Payments {
 
     try {
       // Call the actual M-Pesa payment API
-      await CashierFunctions.payOrder({
+      await CashierFunctions.SendSdkPush({
         "orderNo": orderId,
         "mpesaNo": phoneNumber,
         "amount": amount.toString(),
       }).then((p0) {
         processPayment(orderId);
-        Navigator.of(dialogContext).pop();
+        Navigator.pop(context);
+        // Navigator.of(dialogContext).pop();
       });
 
       // Close dialog safely

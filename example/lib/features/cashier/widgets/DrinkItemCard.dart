@@ -1,10 +1,11 @@
 import 'package:blankets_and_wines_example/core/constants.dart';
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
 import 'package:blankets_and_wines_example/data/models/DrinkItem.dart';
+import 'package:blankets_and_wines_example/data/models/Product.dart';
 import 'package:flutter/material.dart';
 
 class DrinkItemCard extends StatelessWidget {
-  final DrinkItem drink;
+  final Product drink;
   final int cartQuantity;
   final VoidCallback onTap;
 
@@ -35,7 +36,7 @@ class DrinkItemCard extends StatelessWidget {
     double badgeFontSize = isCompactDevice ? 16.0 : (isTabletDevice ? 18.0 : 20.0);
 
     return GestureDetector(
-      onTap: onTap,
+      onTap:  onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
@@ -113,6 +114,45 @@ class DrinkItemCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  
+                  SizedBox(height: verticalSpacing * 0.5),
+                  
+                  // Stock quantity display
+                  if (drink.stock > 0)
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isCompactDevice ? 12.0 : 16.0,
+                        vertical: isCompactDevice ? 6.0 : 8.0,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _getStockColor(drink.stock).withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(
+                          color: _getStockColor(drink.stock).withOpacity(0.5),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.inventory_2_outlined,
+                            size: isCompactDevice ? 14.0 : 16.0,
+                            color: _getStockColor(drink.stock),
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            '${drink.stock} in stock',
+                            style: TextStyle(
+                              color: _getStockColor(drink.stock),
+                              fontSize: isCompactDevice ? 12.0 : (isTabletDevice ? 14.0 : 16.0),
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   
                   SizedBox(height: verticalSpacing * 0.75),
                   
@@ -255,5 +295,16 @@ class DrinkItemCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // Helper method to determine stock color based on quantity
+  Color _getStockColor(int stock) {
+    if (stock <= 5) {
+      return Colors.red[600]!; // Low stock - red
+    } else if (stock <= 15) {
+      return Colors.orange[600]!; // Medium stock - orange
+    } else {
+      return Colors.green[600]!; // High stock - green
+    }
   }
 }

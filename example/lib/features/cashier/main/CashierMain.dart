@@ -3,8 +3,9 @@ import 'package:blankets_and_wines_example/core/constants.dart';
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
 import 'package:blankets_and_wines_example/core/utils/initializers.dart';
 import 'package:blankets_and_wines_example/data/models/DrinkItem.dart';
+import 'package:blankets_and_wines_example/data/models/Product.dart';
+import 'package:blankets_and_wines_example/data/models/ProductCategory.dart';
 import 'package:blankets_and_wines_example/features/Stockist/Stockist.dart';
-import 'package:blankets_and_wines_example/features/cashier/Auth/authfunc.dart';
 import 'package:blankets_and_wines_example/features/cashier/functions/fetchDrinks.dart';
 import 'package:blankets_and_wines_example/features/cashier/models/CartItems.dart';
 import 'package:blankets_and_wines_example/features/cashier/widgets/CartPanel.dart';
@@ -18,7 +19,7 @@ class Cashier extends StatefulWidget {
 }
 
 class _CashierState extends State<Cashier> {
-  late Future<List<DrinkItem>> drinks;
+  late Future<List<ProductCategory>> drinks;
   List<CartItem> cart = [];
  
  
@@ -32,7 +33,7 @@ class _CashierState extends State<Cashier> {
     return cart.fold(0.0, (sum, item) => sum + item.totalPrice);
   }
 
-  void addToCart(DrinkItem drink) {
+  void addToCart(Product drink) {
     setState(() {
       final existingItemIndex = cart.indexWhere(
         (item) => item.drink.id == drink.id,
@@ -82,76 +83,84 @@ class _CashierState extends State<Cashier> {
   }
 
 
-  void processPayment( String orderNumber) async {
+  // void processPayment( String orderNumber) async {
    
 
-    print("Processing sale with order number: $orderNumber");
+  //   print("Processing sale with order number: $orderNumber");
 
-    try {
-      double subtotal = cartTotal / 1.16;
-      double tax = cartTotal - subtotal;
+  //   try {
+  //     double subtotal = cartTotal / 1.16;
+  //     double tax = cartTotal - subtotal;
 
-      await SmartposPlugin.printReceipt({
-        "storeName": "Blankets Bar",
-        "date": DateFormat('yyyy-MM-dd').format(DateTime.now()),
-        "time": DateFormat('HH:mm:ss').format(DateTime.now()),
-        "orderNumber": orderNumber,
-        "items":
-            cart
-                .map(
-                  (item) => {
-                    "name": item.drink.name,
-                    "quantity": item.quantity,
-                    "price": item.totalPrice.toStringAsFixed(2),
-                  },
-                )
-                .toList(),
-        "subtotal": subtotal.toStringAsFixed(2),
-        "tax": tax.toStringAsFixed(2),
-        "total": cartTotal.toStringAsFixed(2),
-        "paymentMethod": "Cash",
-      });
+  //     await SmartposPlugin.printReceipt({
+  //       "storeName": "Blankets Bar",
+  //       "date": DateFormat('yyyy-MM-dd').format(DateTime.now()),
+  //       "time": DateFormat('HH:mm:ss').format(DateTime.now()),
+  //       "orderNumber": orderNumber,
+  //       "items":
+  //           cart
+  //               .map(
+  //                 (item) => {
+  //                   "name": item.drink.name,
+  //                   "quantity": item.quantity,
+  //                   "price": item.totalPrice.toStringAsFixed(2),
+  //                 },
+  //               )
+  //               .toList(),
+  //       "subtotal": subtotal.toStringAsFixed(2),
+  //       "tax": tax.toStringAsFixed(2),
+  //       "total": cartTotal.toStringAsFixed(2),
+  //       "paymentMethod": "Cash",
+  //     });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Order placed successfully! Order #$orderNumber'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 3),
-        ),
-      );
-    } catch (e) {
-      print("Error printing receipt: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error processing order: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: Text('Order placed successfully! Order #$orderNumber'),
+  //         backgroundColor: Colors.green,
+  //         duration: Duration(seconds: 3),
+  //       ),
+  //     );
+  //   } catch (e) {
+  //     print("Error printing receipt: $e");
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: Text('Error processing order: $e'),
+  //         backgroundColor: Colors.red,
+  //       ),
+  //     );
+  //   }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Payment processed successfully!'),
-        backgroundColor: BarPOSTheme.successColor,
-        duration: Duration(seconds: 2),
-      ),
-    );
+  //   ScaffoldMessenger.of(context).showSnackBar(
+  //     SnackBar(
+  //       content: Text('Payment processed successfully!'),
+  //       backgroundColor: BarPOSTheme.successColor,
+  //       duration: Duration(seconds: 2),
+  //     ),
+  //   );
 
-    clearCart();
+  //   clearCart();
 
-    if (!isLargeScreen(context)) {
-      setState(() {
-        isCartVisible = false;
-      });
-    }
-  }
+  //   if (!isLargeScreen(context)) {
+  //     setState(() {
+  //       isCartVisible = false;
+  //     });
+  //   }
+  // }
 
 
+
+
+
+void refreshDrinks() {
+  setState(() {
+    drinks = CashierFunctions.fetchDrinks("products"); // Re-fetch drinks
+  });
+}
 
   @override
   void initState() {
     super.initState();
-    drinks = CashierFunctions.fetchDrinks("products/${appUser.barId}");
+    drinks = CashierFunctions.fetchDrinks("products");
   }
 
   @override
@@ -288,7 +297,7 @@ class _CashierState extends State<Cashier> {
     return Stack(
       children: [
         MenuPanel(
-          drinks: drinks,
+          productsWithCat: drinks,
           selectedCategory: selectedCategory,
           searchQuery: searchQuery,
           searchController: searchController,
@@ -299,6 +308,10 @@ class _CashierState extends State<Cashier> {
             //   selectedCategory = category;
             // });
           },
+          onRefresh: () {
+         drinks = CashierFunctions.fetchDrinks("products/${appUser.barId}");
+    
+          },
 
           onSearchChanged: (query) {
             setState(() {
@@ -306,7 +319,7 @@ class _CashierState extends State<Cashier> {
             });
           },
           onAddToCart: addToCart,
-          printOrder: processPayment,
+
         ),
         if (isCartVisible)
           Positioned.fill(
@@ -325,7 +338,7 @@ class _CashierState extends State<Cashier> {
                     child: Container(
                       width: MediaQuery.of(context).size.width * 0.85,
                       child: CartPanel(
-                       printOrder:processPayment ,
+                    
                         cartTotal: cartTotal,
                         isLargeScreen: false,
                         onRemoveFromCart: removeFromCart,
