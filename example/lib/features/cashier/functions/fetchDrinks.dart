@@ -23,8 +23,6 @@ class CashierFunctions {
     'Liqueur',
   ];
 
-
-
   static Future<List<DrinkItem>> fetchDrinks(String endpoint) async {
     //  because the products endpoint is not ready  we will use the memory map
     try {
@@ -40,28 +38,26 @@ class CashierFunctions {
     }
   }
 
-static Future<List<DrinnksCategory>> fetchCategories(String endpoint) async {
-  try {
-    final categories = await fetchGlobal<DrinnksCategory>(
-      getRequests: (endpoint) => comms.getRequests(endpoint: endpoint),
-      fromJson: (json) => DrinnksCategory.fromJson(json),
-      endpoint: endpoint,
-    );
-    print(categories);
-    return categories;
-  } on Exception catch (e) {
-    throw Exception("fetch Categories error $e");
+  static Future<List<DrinnksCategory>> fetchCategories(String endpoint) async {
+    try {
+      final categories = await fetchGlobal<DrinnksCategory>(
+        getRequests: (endpoint) => comms.getRequests(endpoint: endpoint),
+        fromJson: (json) => DrinnksCategory.fromJson(json),
+        endpoint: endpoint,
+      );
+      print(categories);
+      return categories;
+    } on Exception catch (e) {
+      throw Exception("fetch Categories error $e");
+    }
   }
-}
-
-
-  
 
   static Future<bool> payOrder(Map<String, dynamic> data) async {
     final resp = await comms.postRequest(
       endpoint: "orders/order/pay",
       data: data,
     );
+    print("#############################$resp################################");
     if (resp["rsp"]["success"]) {
       return true;
     } else {
