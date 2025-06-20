@@ -504,7 +504,9 @@ class Payments {
       sdkInitializer();
 
       await SmartposPlugin.printReceipt({
+
         "storeName": "Blankets Bar",
+         "receiptType": userData.userRole=="cashier"? "Sale Receipt" : "Stockist Receipt",
         "date": DateFormat('yyyy-MM-dd').format(DateTime.now()),
         "time": DateFormat('HH:mm:ss').format(DateTime.now()),
         "orderNumber": orderNumber,

@@ -7,6 +7,7 @@ import 'package:blankets_and_wines_example/core/theme/theme.dart';
 import 'package:blankets_and_wines_example/core/utils/ToastService.dart';
 import 'package:blankets_and_wines_example/core/utils/initializers.dart';
 import 'package:blankets_and_wines_example/core/utils/sdkinitializer.dart';
+import 'package:blankets_and_wines_example/data/models/UserRoles.dart';
 import 'package:blankets_and_wines_example/features/cashier/functions/fetchDrinks.dart';
 import 'package:blankets_and_wines_example/features/cashier/widgets/Cartitem.dart';
 import 'package:flutter/material.dart';
@@ -23,7 +24,7 @@ class CartPanel extends StatefulWidget {
   final VoidCallback onClearCart;
   final VoidCallback onShowPayment;
   final VoidCallback onCloseCart;
-
+  final VoidCallback onPaymentConfirm;
 
   const CartPanel({
     Key? key,
@@ -34,7 +35,7 @@ class CartPanel extends StatefulWidget {
     required this.onClearCart,
     required this.onShowPayment,
     required this.onCloseCart,
-
+    required this.onPaymentConfirm,
   }) : super(key: key);
 
   @override
@@ -706,30 +707,23 @@ class _CartPanelState extends State<CartPanel> {
       // Show loading state
       ToastService.showInfo("Confirming payment...");
 
-
-  
-      await CashierFunctions.confirmPayment(orderNumber).then((p0)async{
-
+      await CashierFunctions.confirmPayment(orderNumber).then((p0) async {
         setDialogState(() {
-        isLoading = false;
+          isLoading = false;
+        });
+
+        if (p0) {
+          Navigator.of(context).pop(); // Close the payment dialog
+          await _processPayment(orderNumber);
+
+          // Clear cart and update UI
+          cartG.items.clear();
+          widget.onClearCart();
+
+          // Show final success dialog
+          _showPaymentSuccessDialog(context);
+        }
       });
-
-      if (p0) {
-       Navigator.of(context).pop(); // Close the payment dialog
-       await _processPayment(orderNumber);
-       
-
-        // Clear cart and update UI
-        cartG.items.clear();
-        widget.onClearCart();
-
-        // Show final success dialog
-        _showPaymentSuccessDialog(context);
-      }
-      });
-
-
-  
     } catch (e) {
       setDialogState(() {
         isLoading = false;
@@ -839,6 +833,7 @@ class _CartPanelState extends State<CartPanel> {
 
       await SmartposPlugin.printReceipt({
         "storeName": "Blankets Bar",
+        "receiptType": userData.userRole=="cashier"? "Sale Receipt" : "Stockist Receipt",
         "date": DateFormat('yyyy-MM-dd').format(DateTime.now()),
         "time": DateFormat('HH:mm:ss').format(DateTime.now()),
         "orderNumber": orderNumber,
@@ -859,6 +854,7 @@ class _CartPanelState extends State<CartPanel> {
       });
 
       emitEv.dispose();
+      widget.onPaymentConfirm();
     } catch (e) {
       print("Error printing receipt: $e");
     }

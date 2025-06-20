@@ -36,7 +36,7 @@ class DrinkItemCard extends StatelessWidget {
     double badgeFontSize = isCompactDevice ? 16.0 : (isTabletDevice ? 18.0 : 20.0);
 
     return GestureDetector(
-      onTap:  onTap,
+      onTap:drink.stock<0?null:onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
@@ -284,7 +284,7 @@ class DrinkItemCard extends StatelessWidget {
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: onTap,
+                  onTap:drink.stock<0?null: onTap,
                   borderRadius: BorderRadius.circular(BarPOSTheme.radiusMedium),
                   splashColor: BarPOSTheme.buttonColor.withOpacity(0.15),
                   highlightColor: BarPOSTheme.buttonColor.withOpacity(0.08),

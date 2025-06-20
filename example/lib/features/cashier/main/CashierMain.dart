@@ -83,79 +83,12 @@ class _CashierState extends State<Cashier> {
   }
 
 
-  // void processPayment( String orderNumber) async {
-   
-
-  //   print("Processing sale with order number: $orderNumber");
-
-  //   try {
-  //     double subtotal = cartTotal / 1.16;
-  //     double tax = cartTotal - subtotal;
-
-  //     await SmartposPlugin.printReceipt({
-  //       "storeName": "Blankets Bar",
-  //       "date": DateFormat('yyyy-MM-dd').format(DateTime.now()),
-  //       "time": DateFormat('HH:mm:ss').format(DateTime.now()),
-  //       "orderNumber": orderNumber,
-  //       "items":
-  //           cart
-  //               .map(
-  //                 (item) => {
-  //                   "name": item.drink.name,
-  //                   "quantity": item.quantity,
-  //                   "price": item.totalPrice.toStringAsFixed(2),
-  //                 },
-  //               )
-  //               .toList(),
-  //       "subtotal": subtotal.toStringAsFixed(2),
-  //       "tax": tax.toStringAsFixed(2),
-  //       "total": cartTotal.toStringAsFixed(2),
-  //       "paymentMethod": "Cash",
-  //     });
-
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(
-  //         content: Text('Order placed successfully! Order #$orderNumber'),
-  //         backgroundColor: Colors.green,
-  //         duration: Duration(seconds: 3),
-  //       ),
-  //     );
-  //   } catch (e) {
-  //     print("Error printing receipt: $e");
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(
-  //         content: Text('Error processing order: $e'),
-  //         backgroundColor: Colors.red,
-  //       ),
-  //     );
-  //   }
-
-  //   ScaffoldMessenger.of(context).showSnackBar(
-  //     SnackBar(
-  //       content: Text('Payment processed successfully!'),
-  //       backgroundColor: BarPOSTheme.successColor,
-  //       duration: Duration(seconds: 2),
-  //     ),
-  //   );
-
-  //   clearCart();
-
-  //   if (!isLargeScreen(context)) {
-  //     setState(() {
-  //       isCartVisible = false;
-  //     });
-  //   }
-  // }
-
-
-
-
-
 void refreshDrinks() {
   setState(() {
-    drinks = CashierFunctions.fetchDrinks("products"); // Re-fetch drinks
+    drinks = CashierFunctions.fetchDrinks("products"); 
   });
 }
+
 
   @override
   void initState() {
@@ -338,6 +271,11 @@ void refreshDrinks() {
                     child: Container(
                       width: MediaQuery.of(context).size.width * 0.85,
                       child: CartPanel(
+                        onPaymentConfirm:(){
+                          refreshDrinks();
+                          clearCart();
+                          isCartVisible=false;
+                        } ,
                     
                         cartTotal: cartTotal,
                         isLargeScreen: false,

@@ -257,6 +257,7 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
       double tax = total - subtotal;
 
       await SmartposPlugin.printReceipt({
+        "receiptType": userData.userRole=="cashier"? "Sale Receipt" : "Stockist Receipt",
         "storeName": orderData['bar'] ?? "Blankets Bar",
         "date": DateFormat('yyyy-MM-dd').format(DateTime.now()),
         "time": DateFormat('HH:mm:ss').format(DateTime.now()),

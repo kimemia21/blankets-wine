@@ -505,14 +505,15 @@ private EditText scanResultEditText;
                 
                 // Print store name
                 String storeName = (String) receiptData.get("storeName");
+                String receiptType = (String) receiptData.get("receiptType");
                 if (storeName != null && !storeName.trim().isEmpty()) {
                     mPrinter.setPrintAppendString(storeName, headerFormat);
                 } else {
-                    mPrinter.setPrintAppendString("BAR & GRILL", headerFormat);
+                    mPrinter.setPrintAppendString("Blankets And Wine", headerFormat);
                 }
                 
                 // Print receipt title
-                mPrinter.setPrintAppendString("SALE RECEIPT", subHeaderFormat);
+                mPrinter.setPrintAppendString(receiptType, subHeaderFormat);
                 mPrinter.setPrintAppendString("", normalFormat); // Empty line
                                                                                                                 
                 // Print date and time

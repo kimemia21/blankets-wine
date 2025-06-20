@@ -27,6 +27,7 @@ class _LoginPageState extends State<LoginPage>
 
   bool _isPasswordVisible = false;
   bool _isLoading = false;
+  bool _isDataLoaded = false; // Add this flag
 
   // User data from preferences
   String? _userName;
@@ -44,8 +45,11 @@ class _LoginPageState extends State<LoginPage>
   @override
   void initState() {
     super.initState();
+    _initializeAnimations();
     _loadUserData();
+  }
 
+  void _initializeAnimations() {
     // Single controller for both animations
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 600),
@@ -68,8 +72,6 @@ class _LoginPageState extends State<LoginPage>
         curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
       ),
     );
-
-    _animationController.forward();
   }
 
   @override
@@ -102,6 +104,14 @@ class _LoginPageState extends State<LoginPage>
       }
     } catch (e) {
       print("Error loading user data: $e");
+    } finally {
+      // Set data loaded flag and start animation
+      if (mounted) {
+        setState(() {
+          _isDataLoaded = true;
+        });
+        _animationController.forward();
+      }
     }
   }
 
@@ -193,18 +203,27 @@ class _LoginPageState extends State<LoginPage>
         height: MediaQuery.of(context).size.height,
         color: BarPOSTheme.secondaryDark,
         child: SafeArea(
-          child: AnimatedBuilder(
-            animation: _animationController,
-            builder:
-                (context, child) => Opacity(
-                  opacity: _fadeAnimation.value,
-                  child: Transform.translate(
-                    offset: _slideAnimation.value * 50,
-                    child: _buildContent(theme, colorScheme),
+          child: _isDataLoaded
+              ? AnimatedBuilder(
+                  animation: _animationController,
+                  builder: (context, child) => Opacity(
+                    opacity: _fadeAnimation.value,
+                    child: Transform.translate(
+                      offset: _slideAnimation.value * 50,
+                      child: _buildContent(theme, colorScheme),
+                    ),
                   ),
-                ),
-          ),
+                )
+              : _buildLoadingWidget(),
         ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingWidget() {
+    return const Center(
+      child: CircularProgressIndicator(
+        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
       ),
     );
   }
@@ -243,7 +262,7 @@ class _LoginPageState extends State<LoginPage>
           const SizedBox(height: 8),
 
           Text(
-            userDesc(stringToUser(_userRole!)),
+            userDesc(stringToUser(_userRole ?? 'cashier')), // Provide default value
             style: TextStyle(
               fontSize: 16,
               color: Colors.white.withOpacity(0.9),
