@@ -119,6 +119,7 @@ class Comms {
         };
       case DioExceptionType.badResponse:
         if (e.response != null) {
+          print("DioException caught: ${e.response!.statusCode}");
           return _handleErrorResponse(e.response!);
         }
         return {
