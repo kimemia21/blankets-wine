@@ -107,7 +107,7 @@ import java.util.List;
  * - Card reading (magnetic, IC, contactless)
  * - EMV transaction processing
  * - Receipt printing
- * - PIN pad operations
+ * - PIN pad operationsmDriverManager.getBaseSysDevice();
  * - Device management
  * - QR Code scanning
  */
@@ -125,6 +125,7 @@ public class BlanketsAndWinesPlugin implements FlutterPlugin, MethodCallHandler 
     // Background thread executor for SDK operations
     private ExecutorService executor;
     private Handler mainHandler;
+     private Sys mSys;
     
     // SDK instance variables
     private DriverManager mDriverManager;
@@ -235,56 +236,75 @@ private EditText scanResultEditText;
         }
     }
 
-    private void initializeDevice(Result result) {
-        executor.execute(() -> {
-            try {
-                Log.d(TAG, "Initializing ZCS SmartPos SDK...");
-                
-                // Initialize the ZCS SDK
-                mDriverManager = DriverManager.getInstance();
-                if (mDriverManager == null) {
-                    throw new Exception("Failed to get DriverManager instance");
-                }
-                
-                // Get printer instance
-                mPrinter = mDriverManager.getPrinter();
-                if (mPrinter == null) {
-                    throw new Exception("Failed to get Printer instance");
-                }
-                
-                // Check if device supports paper cutter
-                isSupportCutter = mPrinter.isSuppoerCutter();
-
-                // Initialize QR scanner
-                mHQrsanner = mDriverManager.getHQrsannerDriver();
-                if (mHQrsanner == null) {
-
-                    Log.w(TAG, "QR Scanner not available on this device");
-                    // Don't throw exception, just log warning as some devices may not have scanner
-                }
-           
-                isDeviceInitialized = true;
-                
-                // Return result on main thread
-                mainHandler.post(() -> {
-                    Map<String, Object> response = new HashMap<>();
-                    response.put("success", true);
-                    response.put("message", "ZCS SDK initialized successfully");
-                    response.put("supportsCutter", isSupportCutter);
-                    response.put("hasQRScanner", mHQrsanner != null);
-                    result.success(response);
-                });
-                
-                Log.d(TAG, "SDK initialization completed successfully");
-                
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to initialize SDK", e);
-                mainHandler.post(() -> {
-                    result.error("INIT_ERROR", "Failed to initialize SDK: " + e.getMessage(), null);
-                });
+private void initializeDevice(Result result) {
+    executor.execute(() -> {
+        try {
+            Log.d(TAG, "Initializing ZCS SmartPos SDK...");
+            
+            // Initialize the ZCS SDK
+            mDriverManager = DriverManager.getInstance();
+            if (mDriverManager == null) {
+                throw new Exception("Failed to get DriverManager instance");
             }
-        });
-    }
+            
+            // Get Sys instance for device info - ADD THIS LINE
+            mSys = mDriverManager.getBaseSysDevice();
+            if (mSys == null) {
+                throw new Exception("Failed to get Sys instance");
+            }
+            
+            // Initialize SDK - ADD THIS SECTION
+            int status = mSys.sdkInit();
+            if (status != SdkResult.SDK_OK) {
+                mSys.sysPowerOn();
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                status = mSys.sdkInit();
+                if (status != SdkResult.SDK_OK) {
+                    throw new Exception("SDK initialization failed with status: " + status);
+                }
+            }
+            
+            // Get printer instance
+            mPrinter = mDriverManager.getPrinter();
+            if (mPrinter == null) {
+                throw new Exception("Failed to get Printer instance");
+            }
+            
+            // Check if device supports paper cutter
+            isSupportCutter = mPrinter.isSuppoerCutter();
+
+            // Initialize QR scanner
+            mHQrsanner = mDriverManager.getHQrsannerDriver();
+            if (mHQrsanner == null) {
+                Log.w(TAG, "QR Scanner not available on this device");
+            }
+       
+            isDeviceInitialized = true;
+            
+            // Return result on main thread
+            mainHandler.post(() -> {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", true);
+                response.put("message", "ZCS SDK initialized successfully");
+                response.put("supportsCutter", isSupportCutter);
+                response.put("hasQRScanner", mHQrsanner != null);
+                result.success(response);
+            });
+            
+            Log.d(TAG, "SDK initialization completed successfully");
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to initialize SDK", e);
+            mainHandler.post(() -> {
+                result.error("INIT_ERROR", "Failed to initialize SDK: " + e.getMessage(), null);
+            });
+        }
+    });
+}
 
     private void openDevice(Result result) {
         if (!isDeviceInitialized) {
@@ -359,34 +379,79 @@ private EditText scanResultEditText;
         });
     }
 
-    private void getDeviceInfo(Result result) {
-        executor.execute(() -> {
-            try {
-                Log.d(TAG, "Getting device information...");
-                
-                if (!isDeviceInitialized) {
-                    throw new Exception("Device not initialized");
-                }
-                
-                Map<String, Object> deviceInfo = new HashMap<>();
-                deviceInfo.put("model", "ZCS SmartPos");
-                deviceInfo.put("serialNumber", "ZCS_" + System.currentTimeMillis());
-                deviceInfo.put("sdkVersion", "1.8.1+");
-                deviceInfo.put("supportsCutter", isSupportCutter);
-                deviceInfo.put("hasQRScanner", mHQrsanner != null);
-                deviceInfo.put("printerStatus", getPrinterStatusMessage(mPrinter.getPrinterStatus()));
-                deviceInfo.put("is80MMPrinter", mPrinter.is80MMPrinter());
-                
-                mainHandler.post(() -> result.success(deviceInfo));
-                
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to get device info", e);
-                mainHandler.post(() -> {
-                    result.error("INFO_ERROR", "Failed to get device info: " + e.getMessage(), null);
-                });
+    // We are working on this 
+
+private void getDeviceInfo(Result result) {
+    executor.execute(() -> {
+        try {
+            Log.d(TAG, "Getting device information...");
+            
+            if (!isDeviceInitialized || mSys == null) {
+                throw new Exception("Device not initialized");
             }
-        });
-    }
+            
+            Map<String, Object> deviceInfo = new HashMap<>();
+            
+            // Get serial number using correct ZCS API
+            String[] sn = new String[1];
+            int res = mSys.getSN(sn);
+            Log.d(TAG, "getSN res: " + res);
+            if (res == SdkResult.SDK_OK && sn[0] != null) {
+                deviceInfo.put("serialNumber", sn[0]);
+                Log.d(TAG, "getSN: " + sn[0]);
+            } else {
+                deviceInfo.put("serialNumber", "Unknown");
+            }
+            
+            // Get firmware version using correct ZCS API
+            String[] firmwareVersion = new String[1];
+            res = mSys.getFirmwareVer(firmwareVersion);
+            Log.d(TAG, "getFirmwareVer res: " + res);
+            if (res == SdkResult.SDK_OK && firmwareVersion[0] != null) {
+                deviceInfo.put("firmwareVersion", firmwareVersion[0]);
+                Log.d(TAG, "getFirmwareVer: " + firmwareVersion[0]);
+            } else {
+                deviceInfo.put("firmwareVersion", "Unknown");
+            }
+            
+            // Get base SDK version using correct ZCS API
+            String[] baseSdkVersion = new String[1];
+            res = mSys.getBaseSdkVer(baseSdkVersion);
+            Log.d(TAG, "getBaseSdkVer res: " + res);
+            if (res == SdkResult.SDK_OK && baseSdkVersion[0] != null) {
+                deviceInfo.put("baseSdkVersion", baseSdkVersion[0]);
+                Log.d(TAG, "getBaseSdkVer: " + baseSdkVersion[0]);
+            } else {
+                deviceInfo.put("baseSdkVersion", "Unknown");
+            }
+            
+            // Get SDK version (this method returns string directly)
+            String sdkVersion = mSys.getSdkVersion();
+            deviceInfo.put("sdkVersion", sdkVersion != null ? sdkVersion : "Unknown");
+            Log.d(TAG, "getSdkVersion: " + sdkVersion);
+            
+            // Set model name (ZCS SDK doesn't seem to have a specific method for this)
+            deviceInfo.put("model", "ZCS SmartPos");
+            
+            // Add additional device capabilities
+            deviceInfo.put("supportsCutter", isSupportCutter);
+            deviceInfo.put("hasQRScanner", mHQrsanner != null);
+            deviceInfo.put("printerStatus", getPrinterStatusMessage(mPrinter.getPrinterStatus()));
+            deviceInfo.put("is80MMPrinter", mPrinter.is80MMPrinter());
+            deviceInfo.put("sdkInitialized", true);
+            
+            mainHandler.post(() -> result.success(deviceInfo));
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to get device info", e);
+            mainHandler.post(() -> {
+                result.error("INFO_ERROR", "Failed to get device info: " + e.getMessage(), null);
+            });
+        }
+    });
+}
+
+
 
     private void getDeviceStatus(Result result) {
         Map<String, Object> status = new HashMap<>();

@@ -12,10 +12,28 @@ import 'package:drift/drift.dart' as drift;
 import 'database/database.dart';
 import 'database/dao/categories_dao.dart';
 import 'database/dao/products_dao.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+
+Future<void> getDeviceSerialNumber() async {
+  final deviceInfoPlugin = DeviceInfoPlugin();
+  final androidInfo = await deviceInfoPlugin.androidInfo;
+
+  // This is the unique Android ID (works reliably)
+  String androidId = androidInfo.id; 
+
+  // This is the serial number (may return "unknown" on Android 10+)
+  String serialNumber = androidInfo.serialNumber;
+
+  print("Android ID: $androidId");
+  print("Serial Number: $serialNumber");
+}
+
 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // await getDeviceSerialNumber();
+  
   sdkInitializer();
   await preferences.init();
 

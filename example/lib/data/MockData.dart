@@ -5,6 +5,8 @@ class MockOrdersData {
   static List<StockistOrder> getOrders() {
     return [
       StockistOrder(
+        barName: "Blankets & Wines",
+        id: 1,
         orderNumber: "ORD-001234",
         timestamp: DateTime.now().subtract(Duration(minutes: 5)),
         cashierName: "Sarah M.",

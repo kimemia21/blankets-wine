@@ -230,7 +230,7 @@ class BarPOSTheme {
       ),
       
       // Card Theme
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: secondaryDark,
         elevation: elevationMedium,
         shape: RoundedRectangleBorder(
@@ -246,7 +246,7 @@ class BarPOSTheme {
       ),
       
       // Dialog Theme
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         backgroundColor: accentDark,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusXLarge),

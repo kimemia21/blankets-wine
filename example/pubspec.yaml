@@ -46,6 +46,7 @@ dependencies:
   provider: ^6.1.5
 
   file_picker: ^10.2.0
+  device_info_plus: ^11.5.0
   # bluetooth_classic: ^0.0.4
   # flutter_bluetooth_serial: ^0.4.0
 
