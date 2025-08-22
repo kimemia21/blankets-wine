@@ -1,18 +1,22 @@
-  class Product {
+class Product {
   final int id;
   final String name;
   final String image;
-  final int price;
+  final String price; // keep as string since JSON gives "4500.00"
+  final int category;
+  final String bar;
   final int stock;
-  final int reorder;
+  final bool isDiscount;
 
   Product({
     required this.id,
     required this.name,
     required this.image,
     required this.price,
+    required this.category,
+    required this.bar,
     required this.stock,
-    required this.reorder,
+    required this.isDiscount,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -20,9 +24,11 @@
       id: json['id'],
       name: json['name'],
       image: json['image'],
-      price: json['price'],
+      price: json['price']??0.00,
+      category: json['category'] ,
+      bar: json['bar'],
       stock: json['stock'],
-      reorder: json['reorder'],
+      isDiscount: json['is_discount'],
     );
   }
 
@@ -32,10 +38,10 @@
       'name': name,
       'image': image,
       'price': price,
+      'category': category,
+      'bar': bar,
       'stock': stock,
-      'reorder': reorder,
+      'is_discount': isDiscount,
     };
   }
 }
-
-

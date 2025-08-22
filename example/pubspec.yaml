@@ -48,6 +48,7 @@ dependencies:
   file_picker: ^10.2.0
   share_plus: ^11.1.0
   device_info_plus: ^11.5.0
+  google_fonts: ^6.3.0
 
   # bluetooth_classic: ^0.0.4
   # flutter_bluetooth_serial: ^0.4.0

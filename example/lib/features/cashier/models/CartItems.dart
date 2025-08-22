@@ -7,7 +7,7 @@ class CartItem {
 
   CartItem({required this.drink, this.quantity = 1});
 
-  double get totalPrice =>  drink.price.toDouble() * quantity;
+  double get totalPrice =>  double.parse(drink.price!)* quantity;
 
   Map<String, dynamic> toJson() {
     return {

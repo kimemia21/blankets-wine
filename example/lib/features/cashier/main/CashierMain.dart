@@ -1,9 +1,9 @@
-import 'package:blankets_and_wines/blankets_and_wines.dart';
+
 import 'package:blankets_and_wines_example/core/constants.dart';
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
 import 'package:blankets_and_wines_example/core/utils/initializers.dart';
 import 'package:blankets_and_wines_example/data/models/Category.dart';
-import 'package:blankets_and_wines_example/data/models/DrinkItem.dart';
+
 import 'package:blankets_and_wines_example/data/models/Product.dart';
 import 'package:blankets_and_wines_example/data/models/ProductCategory.dart';
 import 'package:blankets_and_wines_example/features/Stockist/Stockist.dart';
@@ -12,7 +12,7 @@ import 'package:blankets_and_wines_example/features/cashier/models/CartItems.dar
 import 'package:blankets_and_wines_example/features/cashier/widgets/CartPanel.dart';
 import 'package:blankets_and_wines_example/features/cashier/widgets/MenuPanel.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+
 
 class Cashier extends StatefulWidget {
   @override
@@ -20,7 +20,7 @@ class Cashier extends StatefulWidget {
 }
 
 class _CashierState extends State<Cashier> {
-  late Future<List<ProductCategory>> drinks;
+  late Future<List<Product>> drinks;
   late Future<List<DrinnksCategory>> categories;
   List<CartItem> cart = [];
  
@@ -87,7 +87,7 @@ class _CashierState extends State<Cashier> {
 
 void refreshDrinks() {
   setState(() {
-    drinks = CashierFunctions.fetchDrinks("products"); 
+    drinks = CashierFunctions.fetchDrinks("products/${appUser.barId}"); 
     categories = CashierFunctions.fetchCategories("ecom/categories");
   });
 }
@@ -96,7 +96,7 @@ void refreshDrinks() {
   @override
   void initState() {
     super.initState();
-    drinks = CashierFunctions.fetchDrinks("products");
+    drinks = CashierFunctions.fetchDrinks("products/${appUser.barId}");
     categories = CashierFunctions.fetchCategories("ecom/categories");
   }
 
@@ -235,17 +235,17 @@ void refreshDrinks() {
       children: [
         MenuPanel(
 
-          productsWithCat: drinks,
+          products: drinks,
           categories: categories,
           selectedCategory: selectedCategory,
           searchQuery: searchQuery,
           searchController: searchController,
           cart: cart,
           onCategoryChanged: (category) {
-            // setState(() {
+            setState(() {
 
-            //   selectedCategory = category;
-            // });
+              selectedCategory = category;
+            });
           },
           onRefresh: () {
          drinks = CashierFunctions.fetchDrinks("products/${appUser.barId}");

@@ -1,14 +1,13 @@
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
 import 'package:blankets_and_wines_example/data/models/Category.dart';
 import 'package:blankets_and_wines_example/data/models/Product.dart';
-import 'package:blankets_and_wines_example/data/models/ProductCategory.dart';
 import 'package:blankets_and_wines_example/features/cashier/models/CartItems.dart';
 import 'package:blankets_and_wines_example/features/cashier/widgets/DrinkItemCard.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class MenuPanel extends StatelessWidget {
-  final Future<List<ProductCategory>> productsWithCat;
+  final Future<List<Product>> products;
   final Future<List<DrinnksCategory>> categories;
   final String selectedCategory;
   final String searchQuery;
@@ -21,7 +20,7 @@ class MenuPanel extends StatelessWidget {
 
   const MenuPanel({
     Key? key,
-    required this.productsWithCat,
+    required this.products,
     required this.categories,
     required this.selectedCategory,
     required this.searchQuery,
@@ -39,6 +38,22 @@ class MenuPanel extends StatelessWidget {
     if (width > 768) return 3;
     if (width > 600) return 2;
     return 2;
+  }
+
+  /// Filter products based on selected category and search query
+  List<Product> filterProducts(List<Product> allProducts) {
+    return allProducts.where((product) {
+      // Category filtering
+      bool categoryMatch = selectedCategory == 'All' ||
+          product.id.toString() == selectedCategory;
+      
+      // Search filtering
+      bool searchMatch = product.name.toLowerCase().contains(
+        searchQuery.toLowerCase(),
+      );
+      
+      return categoryMatch && searchMatch;
+    }).toList();
   }
 
   @override
@@ -108,10 +123,9 @@ class MenuPanel extends StatelessWidget {
                         child: ElevatedButton(
                           onPressed: () => onCategoryChanged('All'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                isSelected
-                                    ? BarPOSTheme.buttonColor
-                                    : BarPOSTheme.accentDark,
+                            backgroundColor: isSelected
+                                ? BarPOSTheme.buttonColor
+                                : BarPOSTheme.accentDark,
                             foregroundColor: BarPOSTheme.primaryText,
                             textStyle: BarPOSTheme.categoryTextStyle,
                           ),
@@ -121,16 +135,15 @@ class MenuPanel extends StatelessWidget {
                     }
                     
                     final category = categories[index - 1];
-                    final isSelected = selectedCategory == category.id  .toString();
+                    final isSelected = selectedCategory == category.id.toString();
                     return Container(
                       margin: EdgeInsets.only(right: BarPOSTheme.spacingS),
                       child: ElevatedButton(
                         onPressed: () => onCategoryChanged(category.id.toString()),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              isSelected
-                                  ? BarPOSTheme.buttonColor
-                                  : BarPOSTheme.accentDark,
+                          backgroundColor: isSelected
+                              ? BarPOSTheme.buttonColor
+                              : BarPOSTheme.accentDark,
                           foregroundColor: BarPOSTheme.primaryText,
                           textStyle: BarPOSTheme.categoryTextStyle,
                         ),
@@ -153,8 +166,8 @@ class MenuPanel extends StatelessWidget {
               },
               color: BarPOSTheme.buttonColor,
               backgroundColor: BarPOSTheme.accentDark,
-              child: FutureBuilder<List<ProductCategory>>(
-                future: productsWithCat,
+              child: FutureBuilder<List<Product>>(
+                future: products,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return Center(
@@ -179,6 +192,21 @@ class MenuPanel extends StatelessWidget {
                             'Error loading products',
                             style: TextStyle(color: BarPOSTheme.errorColor),
                           ),
+                          if (kDebugMode)
+                            Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: BarPOSTheme.spacingM,
+                                vertical: BarPOSTheme.spacingS,
+                              ),
+                              child: Text(
+                                'Debug: ${snapshot.error}',
+                                style: TextStyle(
+                                  color: BarPOSTheme.errorColor,
+                                  fontSize: 12,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
                           TextButton(
                             onPressed: onRefresh,
                             child: Text('Retry'),
@@ -189,53 +217,23 @@ class MenuPanel extends StatelessWidget {
                   }
 
                   if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return SingleChildScrollView(
-                      physics: AlwaysScrollableScrollPhysics(),
-                      child: Container(
-                        height: MediaQuery.of(context).size.height * 0.5,
-                        child: Center(
-                          child: Text(
-                            'No products available',
-                            style: TextStyle(color: BarPOSTheme.secondaryText),
-                          ),
-                        ),
-                      ),
+                    return _buildEmptyState(
+                      context,
+                      'No products available',
                     );
-                  }
-
-                  // Flatten all products from all categories
-                  final allProducts = <Product>[];
-                  for (final category in snapshot.data!) {
-                    allProducts.addAll(category.products);
                   }
 
                   // Filter products based on selected category and search query
-                  final filteredProducts = allProducts.where((product) {
-                    bool categoryMatch = selectedCategory == 'All' ||
-                        snapshot.data!.any((cat) => 
-                            cat.categoryId.toString() == selectedCategory && 
-                            cat.products.contains(product));
-                    
-                    bool searchMatch = product.name.toLowerCase().contains(
-                      searchQuery.toLowerCase(),
-                    );
-                    
-                    return categoryMatch && searchMatch;
-                  }).toList();
+                  final filteredProducts = filterProducts(snapshot.data!);
 
                   if (filteredProducts.isEmpty) {
-                    return SingleChildScrollView(
-                      physics: AlwaysScrollableScrollPhysics(),
-                      child: Container(
-                        height: MediaQuery.of(context).size.height * 0.5,
-                        child: Center(
-                          child: Text(
-                            'No products found',
-                            style: TextStyle(color: BarPOSTheme.secondaryText),
-                          ),
-                        ),
-                      ),
-                    );
+                    final message = searchQuery.isNotEmpty
+                        ? 'No products found for "$searchQuery"'
+                        : selectedCategory != 'All'
+                            ? 'No products in this category'
+                            : 'No products found';
+                    
+                    return _buildEmptyState(context, message);
                   }
 
                   return GridView.builder(
@@ -266,6 +264,36 @@ class MenuPanel extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, String message) {
+    return SingleChildScrollView(
+      physics: AlwaysScrollableScrollPhysics(),
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.5,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.inventory_2_outlined,
+                size: 64,
+                color: BarPOSTheme.secondaryText.withOpacity(0.5),
+              ),
+              SizedBox(height: BarPOSTheme.spacingM),
+              Text(
+                message,
+                style: TextStyle(
+                  color: BarPOSTheme.secondaryText,
+                  fontSize: 16,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

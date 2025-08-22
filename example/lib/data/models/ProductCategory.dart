@@ -13,8 +13,8 @@ class ProductCategory {
 
   factory ProductCategory.fromJson(Map<String, dynamic> json) {
     return ProductCategory(
-      categoryId: json['category_id'],
-      categoryName: json['category_name'],
+      categoryId: json['category'],
+      categoryName: json['name'],
       products: (json['products'] as List)
           .map((item) => Product.fromJson(item))
           .toList(),

@@ -7,6 +7,7 @@ import 'package:blankets_and_wines_example/core/utils/sdkinitializer.dart';
 import 'package:blankets_and_wines_example/features/cashier/Auth/Login.dart';
 import 'package:blankets_and_wines_example/onBoarding/OnBoarding.dart';
 import 'package:blankets_and_wines_example/playground/BluetoothComms.dart';
+import 'package:blankets_and_wines_example/playground/PrintDummy.dart';
 import 'package:blankets_and_wines_example/widgets/Alerts.dart';
 import 'package:flutter/material.dart';
 import 'package:drift/drift.dart' as drift;
@@ -178,7 +179,9 @@ class _MyAppState extends State<MyApp> {
       navigatorKey: ToastService.navigatorKey,
       title: 'Blankets and Wines',
       debugShowCheckedModeBanner: false,
-      home: _buildHome(),
+      home:
+      // DummyPrintPage(),
+      _buildHome(),
     );
   }
 

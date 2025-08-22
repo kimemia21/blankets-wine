@@ -16,6 +16,7 @@ class DrinkItemCard extends StatelessWidget {
     required this.onTap,
   }) : super(key: key);
 
+
   @override
   Widget build(BuildContext context) {
     final isInCart = cartQuantity > 0;
@@ -34,6 +35,9 @@ class DrinkItemCard extends StatelessWidget {
     double verticalSpacing = isCompactDevice ? 8.0 : (isTabletDevice ? 12.0 : 16.0);
     double badgeSize = isCompactDevice ? 28.0 : (isTabletDevice ? 32.0 : 36.0);
     double badgeFontSize = isCompactDevice ? 16.0 : (isTabletDevice ? 18.0 : 20.0);
+
+
+    print("product infor ${drink.toJson()}");
 
     return GestureDetector(
       onTap:drink.stock<0?null:onTap,
@@ -178,7 +182,7 @@ class DrinkItemCard extends StatelessWidget {
                       ],
                     ),
                     child: Text(
-                      'KSH ${formatWithCommas( drink.price.toStringAsFixed(0))}',
+                      'KSH ${formatWithCommas( drink.price!)}',
                       style: BarPOSTheme.priceTextStyle.copyWith(
                         fontWeight: FontWeight.w800,
                         fontSize: isCompactDevice ? 17.0 : (isTabletDevice ? 20.0 : 24.0),

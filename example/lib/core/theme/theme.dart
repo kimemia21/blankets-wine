@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class BarPOSTheme {
   // Color Palette
@@ -88,10 +89,11 @@ class BarPOSTheme {
         backgroundColor: accentDark,
         elevation: elevationMedium,
         centerTitle: true,
-        titleTextStyle: TextStyle(
+        titleTextStyle: GoogleFonts.rajdhani(
           color: primaryText,
           fontSize: headlineMedium,
           fontWeight: FontWeight.bold,
+          letterSpacing: 1.2,
         ),
         iconTheme: IconThemeData(
           color: primaryText,
@@ -99,82 +101,96 @@ class BarPOSTheme {
         ),
       ),
       
-      // Text Theme with larger fonts for outdoor use
+      // Text Theme with Google Fonts for outdoor use
       textTheme: TextTheme(
-        displayLarge: TextStyle(
+        displayLarge: GoogleFonts.rajdhani(
           color: primaryText,
           fontSize: displayLarge,
           fontWeight: FontWeight.bold,
+          letterSpacing: 1.5,
         ),
-        displayMedium: TextStyle(
+        displayMedium: GoogleFonts.rajdhani(
           color: primaryText,
           fontSize: displayMedium,
           fontWeight: FontWeight.bold,
+          letterSpacing: 1.3,
         ),
-        displaySmall: TextStyle(
+        displaySmall: GoogleFonts.rajdhani(
           color: primaryText,
           fontSize: displaySmall,
           fontWeight: FontWeight.bold,
+          letterSpacing: 1.1,
         ),
-        headlineLarge: TextStyle(
+        headlineLarge: GoogleFonts.rajdhani(
           color: primaryText,
           fontSize: headlineLarge,
           fontWeight: FontWeight.bold,
+          letterSpacing: 1.0,
         ),
-        headlineMedium: TextStyle(
+        headlineMedium: GoogleFonts.rajdhani(
           color: primaryText,
           fontSize: headlineMedium,
           fontWeight: FontWeight.bold,
+          letterSpacing: 0.8,
         ),
-        headlineSmall: TextStyle(
+        headlineSmall: GoogleFonts.rajdhani(
           color: primaryText,
           fontSize: headlineSmall,
           fontWeight: FontWeight.w600,
+          letterSpacing: 0.6,
         ),
-        titleLarge: TextStyle(
+        titleLarge: GoogleFonts.inter(
           color: primaryText,
           fontSize: titleLarge,
           fontWeight: FontWeight.w600,
+          letterSpacing: 0.4,
         ),
-        titleMedium: TextStyle(
+        titleMedium: GoogleFonts.inter(
           color: primaryText,
           fontSize: titleMedium,
           fontWeight: FontWeight.w500,
+          letterSpacing: 0.2,
         ),
-        titleSmall: TextStyle(
+        titleSmall: GoogleFonts.inter(
           color: primaryText,
           fontSize: titleSmall,
           fontWeight: FontWeight.w500,
+          letterSpacing: 0.1,
         ),
-        bodyLarge: TextStyle(
+        bodyLarge: GoogleFonts.inter(
           color: primaryText,
           fontSize: bodyLarge,
           fontWeight: FontWeight.normal,
+          letterSpacing: 0.1,
         ),
-        bodyMedium: TextStyle(
+        bodyMedium: GoogleFonts.inter(
           color: secondaryText,
           fontSize: bodyMedium,
           fontWeight: FontWeight.normal,
+          letterSpacing: 0.1,
         ),
-        bodySmall: TextStyle(
+        bodySmall: GoogleFonts.inter(
           color: mutedText,
           fontSize: bodySmall,
           fontWeight: FontWeight.normal,
         ),
-        labelLarge: TextStyle(
+        labelLarge: GoogleFonts.inter(
           color: primaryText,
           fontSize: labelLarge,
           fontWeight: FontWeight.w500,
+          letterSpacing: 0.5,
         ),
-        labelMedium: TextStyle(
+        labelMedium: GoogleFonts.inter(
           color: secondaryText,
           fontSize: labelMedium,
           fontWeight: FontWeight.w500,
+          letterSpacing: 0.5,
         ),
-        labelSmall: TextStyle(
+        labelSmall: GoogleFonts.inter(
           color: mutedText,
           fontSize: labelSmall,
           fontWeight: FontWeight.w500,
+          letterSpacing: 0.4,
         ),
       ),
       
@@ -185,9 +201,10 @@ class BarPOSTheme {
           foregroundColor: primaryText,
           padding: buttonPadding,
           minimumSize: Size(0, buttonHeight),
-          textStyle: TextStyle(
+          textStyle: GoogleFonts.rajdhani(
             fontSize: titleMedium,
             fontWeight: FontWeight.bold,
+            letterSpacing: 1.0,
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusMedium),
@@ -201,9 +218,10 @@ class BarPOSTheme {
         style: TextButton.styleFrom(
           foregroundColor: primaryText,
           padding: buttonPaddingSmall,
-          textStyle: TextStyle(
+          textStyle: GoogleFonts.inter(
             fontSize: titleSmall,
             fontWeight: FontWeight.w500,
+            letterSpacing: 0.3,
           ),
         ),
       ),
@@ -212,13 +230,14 @@ class BarPOSTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: accentDark,
-        hintStyle: TextStyle(
+        hintStyle: GoogleFonts.inter(
           color: secondaryText,
           fontSize: bodyLarge,
         ),
-        labelStyle: TextStyle(
+        labelStyle: GoogleFonts.inter(
           color: primaryText,
           fontSize: bodyLarge,
+          fontWeight: FontWeight.w500,
         ),
         prefixIconColor: secondaryText,
         suffixIconColor: secondaryText,
@@ -251,12 +270,13 @@ class BarPOSTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusXLarge),
         ),
-        titleTextStyle: TextStyle(
+        titleTextStyle: GoogleFonts.rajdhani(
           color: primaryText,
           fontSize: headlineSmall,
           fontWeight: FontWeight.bold,
+          letterSpacing: 0.8,
         ),
-        contentTextStyle: TextStyle(
+        contentTextStyle: GoogleFonts.inter(
           color: primaryText,
           fontSize: bodyLarge,
         ),
@@ -275,7 +295,7 @@ class BarPOSTheme {
       // Snackbar Theme
       snackBarTheme: SnackBarThemeData(
         backgroundColor: accentDark,
-        contentTextStyle: TextStyle(
+        contentTextStyle: GoogleFonts.inter(
           color: primaryText,
           fontSize: bodyLarge,
         ),
@@ -336,38 +356,43 @@ class BarPOSTheme {
     ],
   );
   
-  // Text Styles for specific use cases
-  static TextStyle get priceTextStyle => TextStyle(
+  // Text Styles for specific use cases with Google Fonts
+  static TextStyle get priceTextStyle => GoogleFonts.jetBrainsMono(
     color: accentText,
     fontSize: titleLarge,
     fontWeight: FontWeight.bold,
+    letterSpacing: 1.2,
   );
   
-  static TextStyle get totalPriceTextStyle => TextStyle(
+  static TextStyle get totalPriceTextStyle => GoogleFonts.jetBrainsMono(
     color: accentText,
     fontSize: headlineSmall,
     fontWeight: FontWeight.bold,
+    letterSpacing: 1.5,
   );
   
-  static TextStyle get itemNameTextStyle => TextStyle(
+  static TextStyle get itemNameTextStyle => GoogleFonts.inter(
     color: primaryText,
     fontSize: bodyLarge,
     fontWeight: FontWeight.bold,
+    letterSpacing: 0.3,
   );
   
-  static TextStyle get categoryTextStyle => TextStyle(
+  static TextStyle get categoryTextStyle => GoogleFonts.rajdhani(
     color: primaryText,
     fontSize: titleSmall,
     fontWeight: FontWeight.bold,
+    letterSpacing: 1.0,
   );
   
-  static TextStyle get quantityTextStyle => TextStyle(
+  static TextStyle get quantityTextStyle => GoogleFonts.jetBrainsMono(
     color: primaryText,
     fontSize: titleMedium,
     fontWeight: FontWeight.bold,
+    letterSpacing: 1.0,
   );
   
-  static TextStyle get hintTextStyle => TextStyle(
+  static TextStyle get hintTextStyle => GoogleFonts.inter(
     color: secondaryText,
     fontSize: bodyLarge,
   );
