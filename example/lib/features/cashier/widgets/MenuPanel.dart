@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 
 class MenuPanel extends StatelessWidget {
   final Future<List<ProductCategory>> productsWithCat;
+  final Future<List<DrinnksCategory>> categories;
   final String selectedCategory;
   final String searchQuery;
   final TextEditingController searchController;
@@ -21,6 +22,7 @@ class MenuPanel extends StatelessWidget {
   const MenuPanel({
     Key? key,
     required this.productsWithCat,
+    required this.categories,
     required this.selectedCategory,
     required this.searchQuery,
     required this.searchController,
@@ -63,8 +65,8 @@ class MenuPanel extends StatelessWidget {
           Container(
             height: BarPOSTheme.buttonHeight,
             margin: EdgeInsets.only(bottom: BarPOSTheme.spacingL),
-            child: FutureBuilder<List<ProductCategory>>(
-              future: productsWithCat,
+            child: FutureBuilder<List<DrinnksCategory>>(
+              future: categories,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Center(
@@ -119,11 +121,11 @@ class MenuPanel extends StatelessWidget {
                     }
                     
                     final category = categories[index - 1];
-                    final isSelected = selectedCategory == category.categoryId.toString();
+                    final isSelected = selectedCategory == category.id  .toString();
                     return Container(
                       margin: EdgeInsets.only(right: BarPOSTheme.spacingS),
                       child: ElevatedButton(
-                        onPressed: () => onCategoryChanged(category.categoryId.toString()),
+                        onPressed: () => onCategoryChanged(category.id.toString()),
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
                               isSelected
@@ -132,7 +134,7 @@ class MenuPanel extends StatelessWidget {
                           foregroundColor: BarPOSTheme.primaryText,
                           textStyle: BarPOSTheme.categoryTextStyle,
                         ),
-                        child: Text(category.categoryName),
+                        child: Text(category.name),
                       ),
                     );
                   },

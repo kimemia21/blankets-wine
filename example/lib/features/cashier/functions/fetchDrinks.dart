@@ -28,7 +28,7 @@ class CashierFunctions {
   ];
 
   static Future<List<ProductCategory>> fetchDrinks(String endpoint) async {
-    //  because the products endpoint is not ready  we will use the memory map
+  
     try {
       final drinks = await fetchGlobal<ProductCategory>(
         getRequests: (endpoint) => comms.getRequests(endpoint: endpoint),

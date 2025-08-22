@@ -2,6 +2,7 @@ import 'package:blankets_and_wines/blankets_and_wines.dart';
 import 'package:blankets_and_wines_example/core/constants.dart';
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
 import 'package:blankets_and_wines_example/core/utils/initializers.dart';
+import 'package:blankets_and_wines_example/data/models/Category.dart';
 import 'package:blankets_and_wines_example/data/models/DrinkItem.dart';
 import 'package:blankets_and_wines_example/data/models/Product.dart';
 import 'package:blankets_and_wines_example/data/models/ProductCategory.dart';
@@ -20,6 +21,7 @@ class Cashier extends StatefulWidget {
 
 class _CashierState extends State<Cashier> {
   late Future<List<ProductCategory>> drinks;
+  late Future<List<DrinnksCategory>> categories;
   List<CartItem> cart = [];
  
  
@@ -86,6 +88,7 @@ class _CashierState extends State<Cashier> {
 void refreshDrinks() {
   setState(() {
     drinks = CashierFunctions.fetchDrinks("products"); 
+    categories = CashierFunctions.fetchCategories("ecom/categories");
   });
 }
 
@@ -94,6 +97,7 @@ void refreshDrinks() {
   void initState() {
     super.initState();
     drinks = CashierFunctions.fetchDrinks("products");
+    categories = CashierFunctions.fetchCategories("ecom/categories");
   }
 
   @override
@@ -230,7 +234,9 @@ void refreshDrinks() {
     return Stack(
       children: [
         MenuPanel(
+
           productsWithCat: drinks,
+          categories: categories,
           selectedCategory: selectedCategory,
           searchQuery: searchQuery,
           searchController: searchController,

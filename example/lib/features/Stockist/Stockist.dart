@@ -45,7 +45,9 @@ class StockistOrder {
     return StockistOrder(
       id: json['id'] ?? 0,
       orderNumber: json['order_no'] ?? '',
-      timestamp: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
+      timestamp: DateTime.parse(
+        json['created_at'] ?? DateTime.now().toIso8601String(),
+      ),
       items: [], // Will be populated separately when order details are fetched
       total: double.parse(json['total']?.toString() ?? '0.0'),
       status: _parseOrderStatus(json['order_status']),
@@ -84,7 +86,8 @@ class StockistOrder {
       'updated_at': DateTime.now().toIso8601String(),
       'bar': barName,
       'first_name': cashierName.split(' ').first,
-      'last_name': cashierName.split(' ').length > 1 ? cashierName.split(' ').last : '',
+      'last_name':
+          cashierName.split(' ').length > 1 ? cashierName.split(' ').last : '',
     };
   }
 }
@@ -177,16 +180,19 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
 
   void _handleSocketOrderData(List<dynamic> newOrderData) {
     try {
-      List<Map<String, dynamic>> currentData = List<Map<String, dynamic>>.from(newOrderData);
-      
+      List<Map<String, dynamic>> currentData = List<Map<String, dynamic>>.from(
+        newOrderData,
+      );
+
       // Check if payload is greater than previous
       bool shouldPrintReceipt = _shouldPrintReceipt(currentData);
-      
+
       // Update orders list
       setState(() {
-        orders = currentData
-            .map((orderJson) => StockistOrder.fromJson(orderJson))
-            .toList();
+        orders =
+            currentData
+                .map((orderJson) => StockistOrder.fromJson(orderJson))
+                .toList();
       });
 
       // Print receipt for new orders if needed
@@ -196,7 +202,7 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
 
       // Update last data reference
       lastSocketData = List.from(currentData);
-      
+
       print('Orders updated: ${orders.length} orders loaded');
     } catch (e) {
       print('Error processing socket data: $e');
@@ -206,32 +212,38 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
   bool _shouldPrintReceipt(List<Map<String, dynamic>> currentData) {
     // If this is the first data load, don't print
     if (lastSocketData.isEmpty) return false;
-    
+
     // Check if current payload has more orders than last payload
     if (currentData.length > lastSocketData.length) return true;
-    
+
     // Check if any order IDs are new
-    Set<int> lastIds = lastSocketData.map((order) => order['id'] as int).toSet();
-    Set<int> currentIds = currentData.map((order) => order['id'] as int).toSet();
-    
+    Set<int> lastIds =
+        lastSocketData.map((order) => order['id'] as int).toSet();
+    Set<int> currentIds =
+        currentData.map((order) => order['id'] as int).toSet();
+
     return currentIds.difference(lastIds).isNotEmpty;
   }
 
-  Future<void> _printReceiptsForNewOrders(List<Map<String, dynamic>> currentData) async {
+  Future<void> _printReceiptsForNewOrders(
+    List<Map<String, dynamic>> currentData,
+  ) async {
     try {
       // Get new order IDs
-      Set<int> lastIds = lastSocketData.map((order) => order['id'] as int).toSet();
-      List<Map<String, dynamic>> newOrders = currentData
-          .where((order) => !lastIds.contains(order['id']))
-          .toList();
+      Set<int> lastIds =
+          lastSocketData.map((order) => order['id'] as int).toSet();
+      List<Map<String, dynamic>> newOrders =
+          currentData.where((order) => !lastIds.contains(order['id'])).toList();
 
       // Print receipt for each new order
       for (var orderData in newOrders) {
         await _printSingleReceipt(orderData);
       }
-      
+
       if (newOrders.isNotEmpty) {
-        _showReceiptAlert('${newOrders.length} new order(s) printed successfully!');
+        _showReceiptAlert(
+          '${newOrders.length} new order(s) printed successfully!',
+        );
       }
     } catch (e) {
       print('Error printing receipts: $e');
@@ -241,15 +253,13 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
 
   Future<void> _printSingleReceipt(Map<String, dynamic> orderData) async {
     try {
-     sdkInitializer();
-      
-      // Create items list - you may need to fetch detailed items from another API
+      sdkInitializer(); // Create items list - you may need to fetch detailed items from another API
       List<Map<String, dynamic>> items = [
         {
           "name": "Order Items", // Placeholder - replace with actual items
           "quantity": "1",
           "price": orderData['total'].toString(),
-        }
+        },
       ];
 
       double total = double.parse(orderData['total'].toString());
@@ -257,7 +267,10 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
       double tax = total - subtotal;
 
       await SmartposPlugin.printReceipt({
-        "receiptType": userData.userRole=="cashier"? "Sale Receipt" : "Stockist Receipt",
+        "receiptType":
+            userData.userRole == "cashier"
+                ? "Sale Receipt"
+                : "Stockist Receipt",
         "storeName": orderData['bar'] ?? "Blankets Bar",
         "date": DateFormat('yyyy-MM-dd').format(DateTime.now()),
         "time": DateFormat('HH:mm:ss').format(DateTime.now()),
@@ -336,7 +349,7 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
     super.initState();
     _initializeQRService();
     connectAndListen();
-    
+
     // Test emit after 5 seconds
     Future.delayed(Duration(seconds: 5)).then((_) {
       testEmitOrder();

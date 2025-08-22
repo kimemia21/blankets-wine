@@ -466,7 +466,7 @@ class Payments {
     );
   }
 
-  static processPayment(String orderNumber) async {
+  static processPayment(String orderNumber, BuildContext context) async {
     print("Processing sale with order number: $orderNumber");
 
     try {
@@ -502,11 +502,12 @@ class Payments {
         print('Disconnected from server');
       });
       sdkInitializer();
-
       await SmartposPlugin.printReceipt({
-
         "storeName": "Blankets Bar",
-         "receiptType": userData.userRole=="cashier"? "Sale Receipt" : "Stockist Receipt",
+        "receiptType":
+            userData.userRole == "cashier"
+                ? "Sale Receipt"
+                : "Stockist Receipt",
         "date": DateFormat('yyyy-MM-dd').format(DateTime.now()),
         "time": DateFormat('HH:mm:ss').format(DateTime.now()),
         "orderNumber": orderNumber,
@@ -574,7 +575,7 @@ class Payments {
         "mpesaNo": phoneNumber,
         "amount": amount.toString(),
       }).then((p0) {
-        processPayment(orderId);
+        processPayment(orderId, context);
         Navigator.pop(context);
         // Navigator.of(dialogContext).pop();
       });

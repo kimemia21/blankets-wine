@@ -1,3 +1,4 @@
+import 'package:blankets_and_wines/blankets_and_wines.dart';
 import 'package:blankets_and_wines_example/core/constants.dart';
 import 'package:blankets_and_wines_example/core/utils/Comms.dart';
 import 'package:blankets_and_wines_example/data/models/UserDataPref.dart';
@@ -5,12 +6,15 @@ import 'package:blankets_and_wines_example/features/cashier/data/UserCashier.dar
 import 'package:blankets_and_wines_example/features/cashier/models/CartItems.dart';
 import 'package:blankets_and_wines_example/preferrences/userPreferences.dart';
 
+
 String qrcode = "";
 Comms comms = Comms();
 
 AppUser appUser = AppUser.empty();
 UserPreferencesManager preferences = UserPreferencesManager();
 UserData userData = UserData.empty();
+DeviceInfo deviceInfo = DeviceInfo.empty();
+
 
 Cart cartG = Cart();
 String baseUrl = 
