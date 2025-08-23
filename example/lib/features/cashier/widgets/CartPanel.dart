@@ -45,27 +45,33 @@ class CartPanel extends StatefulWidget {
 class _CartPanelState extends State<CartPanel> {
   bool isLoading = false;
   bool isProcessingPayment = false;
+  bool _isCancelled = false;
   String orderNumber = "";
   Timer? _paymentCheckTimer;
   int _checkAttempts = 0;
-  int _pinWaitTime = 10;
+  int _pinWaitTime = 15; // Increased to 15 seconds for customer PIN entry
   String _paymentStage = '';
-  static const int MAX_CHECK_ATTEMPTS = 15; // 15 seconds of checking after PIN entry
+  static const int MAX_CHECK_ATTEMPTS =
+      20; // 20 seconds of checking after PIN entry
 
   double get _calculatedTotal => cartG.total;
 
-  @override
-  void dispose() {
-    _paymentCheckTimer?.cancel();
-    super.dispose();
-  }
-
-  // ============ STREAMLINED M-PESA PAYMENT ============
+  // EDIT 1: Modify _showMpesaPayment method to reset states when dialog opens
   void _showMpesaPayment(BuildContext context) {
     final TextEditingController phoneController = TextEditingController();
     final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
     Navigator.of(context).pop(); // Close payment options dialog
+
+    print("==========${userData.userRole}=========");
+    // RESET ALL PAYMENT STATES WHEN DIALOG OPENS
+    setState(() {
+      _isCancelled = false;
+      isProcessingPayment = false;
+      _paymentStage = '';
+      _checkAttempts = 0;
+      _pinWaitTime = 15; // Reset to initial value
+    });
 
     showDialog(
       context: context,
@@ -80,7 +86,7 @@ class _CartPanelState extends State<CartPanel> {
                   children: [
                     Icon(Icons.phone_android, color: Colors.green, size: 28),
                     SizedBox(width: 12),
-                    Text('M-Pesa Payment'),
+                    Text('Customer M-Pesa Payment'),
                   ],
                 ),
                 content: Container(
@@ -93,7 +99,7 @@ class _CartPanelState extends State<CartPanel> {
                         // Order Summary
                         _buildOrderSummary(),
                         SizedBox(height: 20),
-                        
+
                         // Phone Number Input
                         TextFormField(
                           controller: phoneController,
@@ -104,30 +110,38 @@ class _CartPanelState extends State<CartPanel> {
                           ],
                           decoration: InputDecoration(
                             labelText: 'Phone Number',
-                            hintText: '0712345678',
+
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.green, width: 2),
+                              borderSide: BorderSide(
+                                color: Colors.green,
+                                width: 2,
+                              ),
                             ),
                           ),
                           validator: _validatePhoneNumber,
-                          onChanged: (value) => setDialogState(() {}),
+                          onChanged: (value) {
+                            _lastUsedPhoneNumber = value; // Store for later use
+                            setDialogState(() {});
+                          },
                         ),
-                        
+
                         SizedBox(height: 20),
-                        
+
                         // Payment Status or Button
                         isProcessingPayment
-                            ? _buildPaymentProgress()
+                            ? _buildPaymentProgress(
+                              setDialogState,
+                            ) // Pass setDialogState
                             : _buildPaymentButton(
-                                context, 
-                                phoneController, 
-                                formKey, 
-                                setDialogState
-                              ),
+                              context,
+                              phoneController,
+                              formKey,
+                              setDialogState,
+                            ),
                       ],
                     ),
                   ),
@@ -136,7 +150,10 @@ class _CartPanelState extends State<CartPanel> {
                   if (!isProcessingPayment)
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      child: Text('Cancel', style: TextStyle(color: Colors.red)),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.red),
+                      ),
                     ),
                 ],
               ),
@@ -146,6 +163,241 @@ class _CartPanelState extends State<CartPanel> {
       },
     );
   }
+
+  // EDIT 2: Modify _buildPaymentProgress to accept and use setDialogState
+  Widget _buildPaymentProgress([StateSetter? setDialogState]) {
+    return Container(
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.blue.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue.withOpacity(0.1)),
+      ),
+      child: Column(
+        children: [
+          // Subtle progress indicator
+          SizedBox(
+            width: 40,
+            height: 40,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade300),
+              backgroundColor: Colors.blue.shade50,
+            ),
+          ),
+          SizedBox(height: 16),
+
+          // Payment stage description
+          Text(
+            _paymentStage,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              color: Colors.blue[600],
+            ),
+            textAlign: TextAlign.center,
+          ),
+
+          SizedBox(height: 10),
+
+          // Different progress info based on stage
+          if (_paymentStage.contains('customer'))
+            Column(
+              children: [
+                Text(
+                  'Customer has ${_pinWaitTime}s to enter PIN',
+                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                ),
+                SizedBox(height: 6),
+                LinearProgressIndicator(
+                  value: (15 - _pinWaitTime) / 15,
+                  backgroundColor: Colors.grey[200],
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Colors.blue.shade300,
+                  ),
+                  minHeight: 3,
+                ),
+              ],
+            )
+          else if (_paymentStage.contains('Verifying'))
+            Text(
+              'Checking payment... (${_checkAttempts}/${MAX_CHECK_ATTEMPTS}s)',
+              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+            )
+          else
+            Text(
+              'Processing...',
+              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+            ),
+
+          // Cancel button
+          SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 36,
+            child: OutlinedButton(
+              onPressed:
+                  () => _cancelPaymentProcess(
+                    setDialogState,
+                  ), // Pass setDialogState
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: Colors.red.shade300),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                'Cancel Payment',
+                style: TextStyle(color: Colors.red.shade600, fontSize: 14),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // EDIT 4: Modify _processAutoMpesaPayment to properly reset states at the beginning
+  void _processAutoMpesaPayment(
+    BuildContext context,
+    String phoneNumber,
+    StateSetter setDialogState,
+  ) async {
+    try {
+      // COMPLETELY RESET ALL PAYMENT STATES
+      setState(() {
+        _isCancelled = false;
+        isProcessingPayment = true;
+        _checkAttempts = 0;
+        _pinWaitTime = 15; // Reset PIN wait time
+        _paymentStage = 'Sending payment request...';
+      });
+
+      setDialogState(() {
+        isProcessingPayment = true;
+        _checkAttempts = 0;
+        _paymentStage = 'Sending payment request...';
+      });
+
+      // Cancel any existing timers
+      _paymentCheckTimer?.cancel();
+
+      // Step 1: Send M-Pesa prompt and verify it was successful
+      final pushResult = await _sendMpesaPromptWithValidation(phoneNumber);
+
+      if (_isCancelled) return; // Exit if cancelled during request
+
+      if (!pushResult['success']) {
+        _handlePaymentError(setDialogState, pushResult['message']);
+        return;
+      }
+
+      // Step 2: Give customer time to enter PIN (15 seconds)
+      setDialogState(() {
+        _paymentStage = 'Waiting for customer to enter PIN';
+        _pinWaitTime = 15; // Ensure PIN wait time is reset
+      });
+
+      await _waitForPinEntry(setDialogState);
+
+      if (_isCancelled) return; // Exit if cancelled during PIN wait
+
+      // Step 3: Start checking payment status from database
+      setDialogState(() {
+        _paymentStage = 'Verifying payment...';
+      });
+
+      _startAutomaticPaymentCheck(context, setDialogState);
+    } catch (e) {
+      if (!_isCancelled) {
+        _handlePaymentError(
+          setDialogState,
+          'Payment processing error: ${e.toString()}',
+        );
+      }
+    }
+  }
+
+  // EDIT 5: Add a method to completely reset payment states
+  void _resetPaymentStates() {
+    _paymentCheckTimer?.cancel();
+    setState(() {
+      _isCancelled = false;
+      isProcessingPayment = false;
+      _paymentStage = '';
+      _checkAttempts = 0;
+      _pinWaitTime = 15;
+    });
+  }
+
+  // EDIT 6: Call reset when showing payment options (optional - extra safety)
+  void _showPaymentOptions(BuildContext context) {
+    // Reset payment states when showing payment options
+    _resetPaymentStates();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
+          child: AlertDialog(
+            title: Text(
+              'Process Payment',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: BarPOSTheme.primaryText,
+              ),
+            ),
+            content: Container(
+              width: 300,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Amount: KSH ${formatWithCommas(_calculatedTotal.toStringAsFixed(0))}',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: BarPOSTheme.successColor,
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    'Order: $orderNumber',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
+                  SizedBox(height: 20),
+                  _buildPaymentOption(
+                    context,
+                    'M-Pesa Payment',
+                    Icons.phone_android,
+                    Colors.green,
+                    () => _showMpesaPayment(context),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(color: BarPOSTheme.errorColor),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ============ STREAMLINED M-PESA PAYMENT ============
 
   Widget _buildOrderSummary() {
     return Container(
@@ -160,7 +412,7 @@ class _CartPanelState extends State<CartPanel> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Order:', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text('Order ID:', style: TextStyle(fontWeight: FontWeight.bold)),
               Text(orderNumber, style: TextStyle(fontWeight: FontWeight.bold)),
             ],
           ),
@@ -168,9 +420,12 @@ class _CartPanelState extends State<CartPanel> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Amount:', style: TextStyle(fontWeight: FontWeight.bold)),
               Text(
-                'KSHS ${formatWithCommas(_calculatedTotal.toStringAsFixed(0))}',
+                'Total Amount:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text(
+                'KSH ${formatWithCommas(_calculatedTotal.toStringAsFixed(0))}',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -184,80 +439,7 @@ class _CartPanelState extends State<CartPanel> {
     );
   }
 
-  Widget _buildPaymentProgress() {
-    return Container(
-      padding: EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.blue.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.blue.withOpacity(0.2)),
-      ),
-      child: Column(
-        children: [
-          // Calm progress indicator
-          SizedBox(
-            width: 50,
-            height: 50,
-            child: CircularProgressIndicator(
-              strokeWidth: 3,
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade400),
-              backgroundColor: Colors.blue.shade100,
-            ),
-          ),
-          SizedBox(height: 20),
-          
-          // Payment stage description
-          Text(
-            _paymentStage,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Colors.blue[700],
-            ),
-            textAlign: TextAlign.center,
-          ),
-          
-          SizedBox(height: 12),
-          
-          // Different progress info based on stage
-          if (_paymentStage.contains('PIN'))
-            Column(
-              children: [
-                Text(
-                  'Time remaining: ${_pinWaitTime}s',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: (10 - _pinWaitTime) / 10,
-                  backgroundColor: Colors.grey[300],
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade400),
-                ),
-              ],
-            )
-          else if (_paymentStage.contains('Confirming'))
-            Text(
-              'Checking payment status... (${_checkAttempts}/$MAX_CHECK_ATTEMPTS)',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            )
-          else
-            Text(
-              'Please wait...',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
+  // 3. ADD CANCEL FUNCTIONALITY METHOD
 
   Widget _buildPaymentButton(
     BuildContext context,
@@ -267,89 +449,42 @@ class _CartPanelState extends State<CartPanel> {
   ) {
     return SizedBox(
       width: double.infinity,
-      height: 50,
+      height: 48,
       child: ElevatedButton(
-        onPressed: phoneController.text.length >= 9
-            ? () => _processAutoMpesaPayment(
-                context, phoneController.text, setDialogState)
-            : null,
+        onPressed:
+            phoneController.text.length >= 9
+                ? () => _processAutoMpesaPayment(
+                  context,
+                  phoneController.text,
+                  setDialogState,
+                )
+                : null,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.green,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
-        child: Text('Pay with M-Pesa', style: TextStyle(fontSize: 16)),
+        child: Text('Send Payment Request', style: TextStyle(fontSize: 15)),
       ),
     );
   }
 
   String? _validatePhoneNumber(String? value) {
-    if (value == null || value.isEmpty) return 'Please enter phone number';
-    if (value.length != 10) return 'Phone number must be 10 digits';
+    if (value == null || value.isEmpty) return 'Enter customer phone number';
+    if (value.length != 10) return 'Must be 10 digits (07XXXXXXXX)';
     if (!value.startsWith('07') && !value.startsWith('01')) {
-      return 'Phone number must start with 07 or 01';
+      return 'Must start with 07 or 01';
     }
     return null;
   }
 
-  // ============ AUTOMATED PAYMENT PROCESSING ============
-  void _processAutoMpesaPayment(
-    BuildContext context,
-    String phoneNumber,
-    StateSetter setDialogState,
-  ) async {
-    try {
-      setDialogState(() {
-        isProcessingPayment = true;
-        _checkAttempts = 0;
-        _paymentStage = 'Sending M-Pesa prompt...';
-      });
-
-      // Step 1: Send M-Pesa prompt
-      final pushSuccess = await _sendMpesaPrompt(phoneNumber);
-      
-      if (!pushSuccess) {
-        _handlePaymentError(setDialogState, 'Failed to send M-Pesa prompt');
-        return;
-      }
-
-      // Step 2: Give user time to enter PIN (10 seconds)
-      setDialogState(() {
-        _paymentStage = 'Check your phone and enter PIN';
-      });
-      
-      await _waitForPinEntry(setDialogState);
-
-      // Step 3: Start checking payment status from database
-      setDialogState(() {
-        _paymentStage = 'Confirming payment...';
-      });
-      
-      _startAutomaticPaymentCheck(context, setDialogState);
-
-    } catch (e) {
-      _handlePaymentError(setDialogState, 'Payment processing failed: ${e.toString()}');
-    }
-  }
-
-  Future<bool> _sendMpesaPrompt(String phoneNumber) async {
-    try {
-      final success = await CashierFunctions.SendSdkPush({
-        "orderNo": orderNumber,
-        "mpesaNo": phoneNumber,
-        "amount": _calculatedTotal.toString(),
-      });
-
-      return success;
-    } catch (e) {
-      print("Error sending M-Pesa prompt: ${e.toString()}");
-      return false;
-    }
-  }
-
   Future<void> _waitForPinEntry(StateSetter setDialogState) async {
-    // Give user 10 seconds to enter PIN
-    for (int i = 10; i > 0; i--) {
+    // Give customer 15 seconds to enter PIN
+    for (int i = 15; i > 0; i--) {
+      if (_isCancelled) return; // Exit if cancelled
+
       setDialogState(() {
         _pinWaitTime = i;
       });
@@ -357,32 +492,229 @@ class _CartPanelState extends State<CartPanel> {
     }
   }
 
-  void _startAutomaticPaymentCheck(BuildContext context, StateSetter setDialogState) {
+  // void _startAutomaticPaymentCheck(
+  //   BuildContext context,
+  //   StateSetter setDialogState,
+  // ) {
+  //   _checkAttempts = 0;
+
+  //   _paymentCheckTimer = Timer.periodic(Duration(seconds: 1), (timer) async {
+  //     // Check for cancellation first
+  //     if (_isCancelled) {
+  //       timer.cancel();
+  //       return;
+  //     }
+
+  //     _checkAttempts++;
+
+  //     if (_checkAttempts > MAX_CHECK_ATTEMPTS) {
+  //       timer.cancel();
+  //       if (!_isCancelled) {
+  //         // Only show timeout if not cancelled
+  //         _handlePaymentTimeout(setDialogState);
+  //       }
+  //       return;
+  //     }
+
+  //     setDialogState(() {}); // Update UI with new attempt count
+
+  //     try {
+  //       final paymentConfirmed = await CashierFunctions.confirmPayment(
+  //         orderNumber,
+  //       );
+
+  //       if (paymentConfirmed && !_isCancelled) {
+  //         timer.cancel();
+  //         setDialogState(() {
+  //           _paymentStage = 'Payment received!';
+  //         });
+
+  //         // Small delay to show success message
+  //         await Future.delayed(Duration(milliseconds: 600));
+  //         _handlePaymentSuccess(context);
+  //         return;
+  //       }
+  //     } catch (e) {
+  //       // Continue checking even if individual check fails
+  //       print('Payment check attempt $_checkAttempts failed: $e');
+  //     }
+  //   });
+  // }
+
+  // 7. HELPER WIDGET FOR ERROR DIALOG OPTIONS
+  Widget _buildErrorOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+  }) {
+    return Container(
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 8. MODIFY dispose() METHOD TO RESET CANCELLATION STATE
+  @override
+  void dispose() {
+    _paymentCheckTimer?.cancel();
+    _isCancelled = false;
+    super.dispose();
+  }
+
+  // ============ AUTOMATED PAYMENT PROCESSING ============
+
+  Future<Map<String, dynamic>> _sendMpesaPromptWithValidation(
+    String phoneNumber,
+  ) async {
+    try {
+      final result = await CashierFunctions.SendSdkPush({
+        "orderNo": orderNumber,
+        "mpesaNo": phoneNumber,
+        "amount": _calculatedTotal.toString(),
+      });
+
+      if (result) {
+        return {
+          'success': true,
+          'message': 'Payment request sent successfully',
+        };
+      } else {
+        return {
+          'success': false,
+          'message':
+              'Failed to send payment request. Check customer phone number and try again.',
+        };
+      }
+    } catch (e) {
+      print("Error sending M-Pesa prompt: ${e.toString()}");
+      return {
+        'success': false,
+        'message': 'Network error. Unable to send payment request.',
+      };
+    }
+  }
+
+  // EDIT 1: Fix _handlePaymentSuccess to use context properly and avoid navigation issues
+  void _handlePaymentSuccess(BuildContext context) async {
+    try {
+      // Check if context is still valid before proceeding
+      if (!mounted) return;
+
+      // Close payment dialog first, but safely
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(); // Close payment dialog
+      }
+
+      // Process the sale
+      await _processPayment(orderNumber);
+
+      // Clear cart
+      cartG.items.clear();
+      widget.onClearCart();
+
+      // Show success dialog only if context is still valid
+      if (mounted) {
+        _showPaymentSuccessDialog(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ToastService.showError('Error completing payment: ${e.toString()}');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => isProcessingPayment = false);
+      }
+    }
+  }
+
+  // EDIT 2: Fix _startAutomaticPaymentCheck to handle context safely
+  void _startAutomaticPaymentCheck(
+    BuildContext context,
+    StateSetter setDialogState,
+  ) {
     _checkAttempts = 0;
-    
+
     _paymentCheckTimer = Timer.periodic(Duration(seconds: 1), (timer) async {
-      _checkAttempts++;
-      
-      if (_checkAttempts > MAX_CHECK_ATTEMPTS) {
+      // Check for cancellation first
+      if (_isCancelled || !mounted) {
         timer.cancel();
-        _handlePaymentTimeout(setDialogState);
         return;
       }
 
-      setDialogState(() {}); // Update UI with new attempt count
+      _checkAttempts++;
+
+      if (_checkAttempts > MAX_CHECK_ATTEMPTS) {
+        timer.cancel();
+        if (!_isCancelled && mounted) {
+          // Check mounted state
+          _handlePaymentTimeout(setDialogState);
+        }
+        return;
+      }
+
+      // Safely update dialog state
+      if (mounted) {
+        setDialogState(() {}); // Update UI with new attempt count
+      }
 
       try {
-        final paymentConfirmed = await CashierFunctions.confirmPayment(orderNumber);
-        
-        if (paymentConfirmed) {
+        final paymentConfirmed = await CashierFunctions.confirmPayment(
+          orderNumber,
+        );
+
+        if (paymentConfirmed && !_isCancelled && mounted) {
           timer.cancel();
-          setDialogState(() {
-            _paymentStage = 'Payment successful!';
-          });
-          
-          // Small delay to show success message
+
+          // Update dialog state to show success
+          if (mounted) {
+            setDialogState(() {
+              _paymentStage = 'Payment received!';
+            });
+          }
+
+          // Small delay to show success message, then handle success
           await Future.delayed(Duration(milliseconds: 800));
-          _handlePaymentSuccess(context);
+
+          // Check if still mounted before proceeding
+          if (mounted && !_isCancelled) {
+            _handlePaymentSuccess(context);
+          }
           return;
         }
       } catch (e) {
@@ -392,55 +724,229 @@ class _CartPanelState extends State<CartPanel> {
     });
   }
 
-  void _handlePaymentSuccess(BuildContext context) async {
-    try {
-      Navigator.of(context).pop(); // Close payment dialog
-      
-      // Process the sale
-      await _processPayment(orderNumber);
-      
-      // Clear cart
-      cartG.items.clear();
-      widget.onClearCart();
-      
-      // Show success dialog
-      _showPaymentSuccessDialog(context);
-      
-    } catch (e) {
-      ToastService.showError('Error completing payment: ${e.toString()}');
-    } finally {
-      setState(() => isProcessingPayment = false);
-    }
-  }
+  // EDIT 3: Fix _handlePaymentError to handle navigation safely
+  void _handlePaymentError(StateSetter setDialogState, String message) {
+    if (!mounted) return;
 
-  void _handlePaymentTimeout(StateSetter setDialogState) {
-    setDialogState(() {
-      isProcessingPayment = false;
-      _paymentStage = 'Payment timeout';
-    });
-    
-    // Show a gentle timeout message
+    setDialogState(() => isProcessingPayment = false);
+
+    // Show improved error dialog
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        // Use different context variable
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 4.0, sigmaY: 4.0),
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.error_outline,
+                      color: Colors.red.shade700,
+                      size: 24,
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Payment Failed',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red.shade700,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Order #$orderNumber',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            content: Container(
+              constraints: BoxConstraints(maxWidth: 400),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: 8),
+                  Container(
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: Colors.grey[600],
+                          size: 20,
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            message,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[800],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'What would you like to do?',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  _buildErrorOption(
+                    icon: Icons.refresh,
+                    title: 'Try Again',
+                    subtitle: 'Retry the payment process',
+                    color: Colors.blue,
+                  ),
+                  SizedBox(height: 8),
+                  _buildErrorOption(
+                    icon: Icons.cancel_outlined,
+                    title: 'Cancel Order',
+                    subtitle: 'Cancel this transaction',
+                    color: Colors.red,
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              // Cancel Order Button
+              TextButton(
+                onPressed: () {
+                  // Safe navigation - check if can pop before popping
+                  if (Navigator.of(dialogContext).canPop()) {
+                    Navigator.of(dialogContext).pop(); // Close error dialog
+                  }
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop(); // Close payment dialog
+                  }
+                  ToastService.showError(
+                    'Order cancelled due to payment failure',
+                  );
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red.shade600,
+                ),
+                child: Text('Cancel Order'),
+              ),
+
+              // Try Again Button
+              ElevatedButton(
+                onPressed: () {
+                  // Safe navigation
+                  if (Navigator.of(dialogContext).canPop()) {
+                    Navigator.of(dialogContext).pop(); // Close error dialog
+                  }
+                  // Reset states and try again
+                  if (mounted) {
+                    setDialogState(() {
+                      isProcessingPayment = false;
+                      _paymentStage = '';
+                      _isCancelled = false;
+                      _pinWaitTime = 15;
+                      _checkAttempts = 0;
+                    });
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text('Try Again'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // EDIT 4: Fix _cancelPaymentProcess to handle navigation safely
+  void _cancelPaymentProcess([StateSetter? setDialogState]) {
+    // Cancel any running timers first
+    _paymentCheckTimer?.cancel();
+
+    // Reset all states
+    if (mounted) {
+      setState(() {
+        _isCancelled = true;
+        isProcessingPayment = false;
+        _paymentStage = '';
+      });
+    }
+
+    // Also reset dialog state if available
+    if (setDialogState != null && mounted) {
+      setDialogState(() {
+        isProcessingPayment = false;
+        _paymentStage = '';
+      });
+    }
+
+    // Show cancellation confirmation
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        // Use different context variable
         return AlertDialog(
           title: Row(
             children: [
-              Icon(Icons.access_time, color: Colors.orange, size: 28),
+              Icon(Icons.cancel_outlined, color: Colors.orange, size: 28),
               SizedBox(width: 12),
-              Text('Payment Timeout'),
+              Text('Payment Cancelled'),
             ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Text('The payment process has been cancelled.'),
+              SizedBox(height: 8),
               Text(
-                'The payment is taking longer than expected.',
-                style: TextStyle(fontSize: 16),
-              ),
-              SizedBox(height: 12),
-              Text(
-                'Please check your phone for the M-Pesa prompt or try again.',
+                'Order #$orderNumber has been created but not paid.',
                 style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               ),
             ],
@@ -448,23 +954,16 @@ class _CartPanelState extends State<CartPanel> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Close timeout dialog
-                Navigator.of(context).pop(); // Close payment dialog
+                // Safe navigation
+                if (Navigator.of(dialogContext).canPop()) {
+                  Navigator.of(dialogContext).pop(); // Close confirmation
+                }
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop(); // Close payment dialog
+                }
+                ToastService.showInfo('Payment cancelled');
               },
-              child: Text('Try Again Later'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop(); 
-                
-                // Close timeout dialog
-                // Stay in payment dialog to retry
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-              child: Text('Check Again'),
+              child: Text('OK'),
             ),
           ],
         );
@@ -472,74 +971,240 @@ class _CartPanelState extends State<CartPanel> {
     );
   }
 
-  void _handlePaymentError(StateSetter setDialogState, String message) {
-    setDialogState(() => isProcessingPayment = false);
-    ToastService.showError(message);
-  }
+  // EDIT 5: Fix _handlePaymentTimeout to handle navigation safely
+  void _handlePaymentTimeout(StateSetter setDialogState) {
+    if (!mounted) return;
 
-  // ============ PAYMENT OPTIONS ============
-  void _showPaymentOptions(BuildContext context) {
+    setDialogState(() {
+      isProcessingPayment = false;
+      _paymentStage = 'Payment taking longer than expected';
+    });
+
+    // Show improved timeout dialog with better options
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
-        return BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
-          child: AlertDialog(
-            title: Text(
-              'Select Payment Method',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: BarPOSTheme.primaryText,
+      builder: (BuildContext dialogContext) {
+        // Use different context variable
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.schedule, color: Colors.orange, size: 28),
+              SizedBox(width: 12),
+              Text('Payment Status'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'The payment is taking longer than usual.',
+                style: TextStyle(fontSize: 16),
               ),
-            ),
-            content: Container(
-              width: 300,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Total: KSHS ${formatWithCommas(_calculatedTotal.toStringAsFixed(0))}',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: BarPOSTheme.successColor,
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    'Order: $orderNumber',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  SizedBox(height: 20),
-                  _buildPaymentOption(
-                    context,
-                    'M-Pesa',
-                    Icons.phone_android,
-                    Colors.green,
-                    () => _showMpesaPayment(context),
-                  ),
-                ],
+              SizedBox(height: 12),
+              Text(
+                'Options:',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text('Cancel', style: TextStyle(color: BarPOSTheme.errorColor)),
+              SizedBox(height: 8),
+              Text(
+                '• Confirm Payment: Check if customer already paid',
+                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+              ),
+              SizedBox(height: 4),
+              Text(
+                '• Prompt Again: Send new payment request',
+                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+              ),
+              SizedBox(height: 4),
+              Text(
+                '• Cancel: Cancel this order',
+                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
               ),
             ],
           ),
+          actions: [
+            // Cancel Order
+            TextButton(
+              onPressed: () {
+                // Safe navigation
+                if (Navigator.of(dialogContext).canPop()) {
+                  Navigator.of(dialogContext).pop(); // Close timeout dialog
+                }
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop(); // Close payment dialog
+                }
+                ToastService.showInfo('Order cancelled');
+              },
+              child: Text('Cancel Order', style: TextStyle(color: Colors.red)),
+            ),
+
+            // Confirm Payment
+            TextButton(
+              onPressed: () async {
+                if (Navigator.of(dialogContext).canPop()) {
+                  Navigator.of(dialogContext).pop(); // Close timeout dialog
+                }
+                if (mounted) {
+                  await _checkPaymentOnly(setDialogState);
+                }
+              },
+              child: Text(
+                'Confirm Payment',
+                style: TextStyle(color: Colors.blue),
+              ),
+            ),
+
+            // Prompt Again
+            ElevatedButton(
+              onPressed: () async {
+                if (Navigator.of(dialogContext).canPop()) {
+                  Navigator.of(dialogContext).pop(); // Close timeout dialog
+                }
+                if (mounted) {
+                  await _promptAgainInSameDialog(setDialogState);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('Prompt Again'),
+            ),
+          ],
         );
       },
     );
   }
+
+  // EDIT 6: Add safety checks to _checkPaymentOnly
+  Future<void> _checkPaymentOnly(StateSetter setDialogState) async {
+    if (!mounted) return;
+
+    try {
+      // Show loading briefly
+      setDialogState(() {
+        isProcessingPayment = true;
+        _paymentStage = 'Checking payment status...';
+      });
+
+      final paymentConfirmed = await CashierFunctions.confirmPayment(
+        orderNumber,
+      );
+
+      if (!mounted) return;
+
+      if (paymentConfirmed) {
+        _handlePaymentSuccess(context);
+        ToastService.showSuccess('Payment confirmed!');
+      } else {
+        setDialogState(() {
+          isProcessingPayment = false;
+          _paymentStage = 'No payment found yet';
+        });
+        ToastService.showInfo('No payment found. Customer may need more time.');
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      setDialogState(() {
+        isProcessingPayment = false;
+        _paymentStage = 'Error checking payment';
+      });
+      ToastService.showError('Error checking payment: ${e.toString()}');
+    }
+  }
+
+  // EDIT 7: Add safety checks to _promptAgainInSameDialog
+  Future<void> _promptAgainInSameDialog(StateSetter setDialogState) async {
+    if (!mounted) return;
+
+    try {
+      // First, check if payment already exists
+      setDialogState(() {
+        isProcessingPayment = true;
+        _paymentStage = 'Checking if customer already paid...';
+      });
+
+      final paymentConfirmed = await CashierFunctions.confirmPayment(
+        orderNumber,
+      );
+
+      if (!mounted) return;
+
+      if (paymentConfirmed) {
+        _handlePaymentSuccess(context);
+        ToastService.showSuccess('Payment was already completed!');
+        return;
+      }
+
+      // If no payment found, send new prompt using the same dialog
+      setDialogState(() {
+        _paymentStage = 'Sending new payment request...';
+      });
+
+      // Get the phone number from the text field in the current dialog
+      final phoneNumber = _getCurrentPhoneNumber();
+
+      if (phoneNumber.isEmpty) {
+        setDialogState(() {
+          isProcessingPayment = false;
+          _paymentStage = 'Phone number required';
+        });
+        ToastService.showError('Please enter customer phone number');
+        return;
+      }
+
+      // Send new prompt with validation
+      final pushResult = await _sendMpesaPromptWithValidation(phoneNumber);
+
+      if (!mounted) return;
+
+      if (!pushResult['success']) {
+        setDialogState(() {
+          isProcessingPayment = false;
+          _paymentStage = 'Failed to send payment request';
+        });
+        ToastService.showError(pushResult['message']);
+        return;
+      }
+
+      // If successful, continue with normal flow
+      setDialogState(() {
+        _paymentStage = 'Waiting for customer to enter PIN';
+        _pinWaitTime = 15; // Reset PIN wait time
+      });
+
+      await _waitForPinEntry(setDialogState);
+
+      if (!mounted || _isCancelled) return;
+
+      setDialogState(() {
+        _paymentStage = 'Verifying payment...';
+      });
+
+      _startAutomaticPaymentCheck(context, setDialogState);
+    } catch (e) {
+      if (!mounted) return;
+
+      setDialogState(() {
+        isProcessingPayment = false;
+        _paymentStage = 'Error occurred';
+      });
+      ToastService.showError('Error: ${e.toString()}');
+    }
+  }
+
+  // Helper to get current phone number from dialog (you'll need to store this)
+  String _getCurrentPhoneNumber() {
+    // This should return the phone number from the current dialog
+    // You might need to store this as a class variable or pass it differently
+    // For now, returning empty string - you'll need to modify this based on your implementation
+    return _lastUsedPhoneNumber ?? '';
+  }
+
+  String? _lastUsedPhoneNumber; // Add this as a class variable
 
   Widget _buildPaymentOption(
     BuildContext context,
@@ -562,7 +1227,10 @@ class _CartPanelState extends State<CartPanel> {
           children: [
             Icon(icon, color: color, size: 28),
             SizedBox(width: 16),
-            Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
+            Text(
+              title,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+            ),
             Spacer(),
             Icon(Icons.arrow_forward_ios, color: Colors.grey[600], size: 16),
           ],
@@ -580,9 +1248,13 @@ class _CartPanelState extends State<CartPanel> {
         return AlertDialog(
           title: Row(
             children: [
-              Icon(Icons.check_circle, color: BarPOSTheme.successColor, size: 32),
+              Icon(
+                Icons.check_circle,
+                color: BarPOSTheme.successColor,
+                size: 32,
+              ),
               SizedBox(width: 12),
-              Text('Payment Completed!'),
+              Text('Sale Completed'),
             ],
           ),
           content: Column(
@@ -594,7 +1266,7 @@ class _CartPanelState extends State<CartPanel> {
               ),
               SizedBox(height: 8),
               Text(
-                'Amount: KSHS ${formatWithCommas(_calculatedTotal.toStringAsFixed(0))}',
+                'Amount: KSH ${formatWithCommas(_calculatedTotal.toStringAsFixed(0))}',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -603,7 +1275,7 @@ class _CartPanelState extends State<CartPanel> {
               ),
               SizedBox(height: 16),
               Text(
-                'Receipt printed successfully.',
+                'Receipt printed. Ready for next customer.',
                 style: TextStyle(color: Colors.grey[600]),
                 textAlign: TextAlign.center,
               ),
@@ -619,7 +1291,7 @@ class _CartPanelState extends State<CartPanel> {
                   foregroundColor: Colors.white,
                   padding: EdgeInsets.symmetric(vertical: 16),
                 ),
-                child: Text('Continue', style: TextStyle(fontSize: 16)),
+                child: Text('Next Customer', style: TextStyle(fontSize: 16)),
               ),
             ),
           ],
@@ -646,7 +1318,9 @@ class _CartPanelState extends State<CartPanel> {
         });
         _showPaymentOptions(context);
       } else {
-        ToastService.showError(response["rsp"]["message"] ?? "Failed to create order");
+        ToastService.showError(
+          response["rsp"]["message"] ?? "Failed to create order",
+        );
       }
     } catch (e) {
       ToastService.showError('Error creating order: ${e.toString()}');
@@ -677,15 +1351,23 @@ class _CartPanelState extends State<CartPanel> {
       sdkInitializer();
       await SmartposPlugin.printReceipt({
         "storeName": "Blankets Bar",
-        "receiptType": userData.userRole == "cashier" ? "Sale Receipt" : "Stockist Receipt",
+        "receiptType":
+            userData.userRole == "Cashier"
+                ? "Sale Receipt"
+                : "Stockist Receipt",
         "date": DateFormat('yyyy-MM-dd').format(DateTime.now()),
         "time": DateFormat('HH:mm:ss').format(DateTime.now()),
         "orderNumber": orderNumber,
-        "items": cartG.items.map((item) => {
-          "name": item.drink.name,
-          "quantity": item.quantity,
-          "price": item.totalPrice.toStringAsFixed(2),
-        }).toList(),
+        "items":
+            cartG.items
+                .map(
+                  (item) => {
+                    "name": item.drink.name,
+                    "quantity": item.quantity,
+                    "price": item.totalPrice.toStringAsFixed(2),
+                  },
+                )
+                .toList(),
         "subtotal": cartG.total.toStringAsFixed(2),
         "tax": "0.00",
         "total": cartG.total.toStringAsFixed(2),
@@ -713,13 +1395,20 @@ class _CartPanelState extends State<CartPanel> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Current Order', style: Theme.of(context).textTheme.headlineSmall),
+                Text(
+                  'Current Order',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
                 Row(
                   children: [
                     if (cartG.items.isNotEmpty)
                       IconButton(
                         onPressed: widget.onClearCart,
-                        icon: Icon(Icons.clear_all, color: BarPOSTheme.errorColor, size: 28),
+                        icon: Icon(
+                          Icons.clear_all,
+                          color: BarPOSTheme.errorColor,
+                          size: 28,
+                        ),
                       ),
                     if (!widget.isLargeScreen)
                       IconButton(
@@ -734,7 +1423,10 @@ class _CartPanelState extends State<CartPanel> {
 
           // Cart Items
           Expanded(
-            child: cartG.items.isEmpty ? _buildEmptyCart(context) : _buildCartItems(),
+            child:
+                cartG.items.isEmpty
+                    ? _buildEmptyCart(context)
+                    : _buildCartItems(),
           ),
 
           // Checkout Section
@@ -749,13 +1441,17 @@ class _CartPanelState extends State<CartPanel> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.shopping_cart_outlined, color: BarPOSTheme.secondaryText, size: 64),
+          Icon(
+            Icons.shopping_cart_outlined,
+            color: BarPOSTheme.secondaryText,
+            size: 64,
+          ),
           SizedBox(height: BarPOSTheme.spacingM),
           Text(
-            'No items in cart',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: BarPOSTheme.secondaryText,
-            ),
+            'No items in order',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: BarPOSTheme.secondaryText),
           ),
         ],
       ),
@@ -771,7 +1467,8 @@ class _CartPanelState extends State<CartPanel> {
         return CartItemTile(
           cartItem: item,
           onRemove: () => widget.onRemoveFromCart(item.drink.id),
-          onUpdateQuantity: (quantity) => widget.onUpdateQuantity(item.drink.id, quantity),
+          onUpdateQuantity:
+              (quantity) => widget.onUpdateQuantity(item.drink.id, quantity),
         );
       },
     );
@@ -794,7 +1491,7 @@ class _CartPanelState extends State<CartPanel> {
             children: [
               Text('Total:', style: Theme.of(context).textTheme.headlineSmall),
               Text(
-                'KSHS ${formatWithCommas(_calculatedTotal.toStringAsFixed(0))}',
+                'KSH ${formatWithCommas(_calculatedTotal.toStringAsFixed(0))}',
                 style: BarPOSTheme.totalPriceTextStyle,
               ),
             ],
@@ -809,9 +1506,17 @@ class _CartPanelState extends State<CartPanel> {
                 backgroundColor: BarPOSTheme.successColor,
                 foregroundColor: BarPOSTheme.primaryText,
               ),
-              child: isLoading
-                  ? CircularProgressIndicator(color: BarPOSTheme.primaryText)
-                  : Text('Create Order'),
+              child:
+                  isLoading
+                      ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: BarPOSTheme.primaryText,
+                        ),
+                      )
+                      : Text('Process Payment', style: TextStyle(fontSize: 16)),
             ),
           ),
         ],
