@@ -1,10 +1,26 @@
-class UserData {
+import 'package:hive/hive.dart';
+import 'hive_type_ids.dart';
+ part 'UserData.g.dart';
+
+@HiveType(typeId: HiveTypeId.userDataPref)
+class UserData extends HiveObject {
+  @HiveField(0)
   final String userRole;
+
+  @HiveField(1)
   final int userRoleId;
+
+  @HiveField(2)
   final String username;
+
+  @HiveField(3)
   final String password;
+
+  @HiveField(4)
   final bool isLoggedIn;
-  final String phoneNumber; 
+
+  @HiveField(5)
+  final String phoneNumber;
 
   UserData({
     required this.userRole,
@@ -15,17 +31,30 @@ class UserData {
     required this.phoneNumber,
   });
 
-  Map<String, dynamic> toMap() {
+  /// JSON serialization
+  factory UserData.fromJson(Map<String, dynamic> json) {
+    return UserData(
+      userRole: json['user_role'] ?? '',
+      userRoleId: json['user_role_id'] ?? 0,
+      username: json['username'] ?? '',
+      password: json['password'] ?? '',
+      isLoggedIn: json['is_logged_in'] ?? false,
+      phoneNumber: json['phone_number'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
     return {
-      'userRole': userRole,
-      'userRoleId': userRoleId,
+      'user_role': userRole,
+      'user_role_id': userRoleId,
       'username': username,
       'password': password,
-      'isLoggedIn': isLoggedIn,
-      'phoneNumber': phoneNumber,
+      'is_logged_in': isLoggedIn,
+      'phone_number': phoneNumber,
     };
   }
 
+  /// Empty debug user
   factory UserData.empty() {
     return UserData(
       userRole: 'debug_role',
@@ -37,17 +66,7 @@ class UserData {
     );
   }
 
-  factory UserData.fromMap(Map<String, dynamic> map) {
-    return UserData(
-      userRole: map['userRole'] ?? '',
-      userRoleId: map['userRoleId'] ?? 0,
-      username: map['username'] ?? '',
-      password: map['password'] ?? '',
-      isLoggedIn: map['isLoggedIn'] ?? false,
-      phoneNumber: map['phoneNumber'] ?? '',
-    );
-  }
-
+  /// Copy with override
   UserData copyWith({
     String? userRole,
     int? userRoleId,
@@ -68,6 +87,6 @@ class UserData {
 
   @override
   String toString() {
-    return 'UserData(userRole: $userRole, userRoleId: $userRoleId, username: $username, isLoggedIn: $isLoggedIn)';
+    return 'UserData(userRole: $userRole, userRoleId: $userRoleId, username: $username, isLoggedIn: $isLoggedIn, phoneNumber: $phoneNumber)';
   }
 }

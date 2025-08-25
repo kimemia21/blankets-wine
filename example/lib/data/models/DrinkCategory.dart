@@ -1,24 +1,33 @@
-class DrinnksCategory {
+import 'package:hive/hive.dart';
+import 'hive_type_ids.dart';
+
+ part 'DrinkCategory.g.dart';
+
+@HiveType(typeId: HiveTypeId.drinkCategory)
+class DrinkCategory extends HiveObject {
+  @HiveField(0)
   final int id;
+
+  @HiveField(1)
   final String name;
+
+  @HiveField(2)
   final String slug;
 
-  DrinnksCategory({
+  DrinkCategory({
     required this.id,
     required this.name,
     required this.slug,
   });
 
-  // Factory constructor for creating a new DrinnksCategory from a map (JSON)
-  factory DrinnksCategory.fromJson(Map<String, dynamic> json) {
-    return DrinnksCategory(
+  factory DrinkCategory.fromJson(Map<String, dynamic> json) {
+    return DrinkCategory(
       id: json['id'],
       name: json['name'],
       slug: json['slug'],
     );
   }
 
-  // Method for converting a DrinnksCategory to a map (JSON)
   Map<String, dynamic> toJson() {
     return {
       'id': id,
