@@ -191,6 +191,7 @@ class _OnboardingPageState extends State<OnboardingPage>
   }
 
   void nextScreenNavigator(String userType, int userRole) async {
+  
     if (_disposed) return;
     
     try {
@@ -213,7 +214,7 @@ class _OnboardingPageState extends State<OnboardingPage>
      
       
       
-      if (selectedRole == users.cashier||selectedRole == users.stockist) {
+      if (selectedRole == users.cashier||selectedRole == users.stockist|| selectedRole == users.bartender) {
          Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => LoginPage()),

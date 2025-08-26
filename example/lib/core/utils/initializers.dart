@@ -1,10 +1,11 @@
 import 'package:blankets_and_wines/blankets_and_wines.dart';
 import 'package:blankets_and_wines_example/core/constants.dart';
 import 'package:blankets_and_wines_example/core/utils/Comms.dart';
-import 'package:blankets_and_wines_example/data/models/UserDataPref.dart';
+import 'package:blankets_and_wines_example/data/models/UserData.dart';
 import 'package:blankets_and_wines_example/features/cashier/data/UserCashier.dart';
 import 'package:blankets_and_wines_example/features/cashier/models/CartItems.dart';
 import 'package:blankets_and_wines_example/preferrences/userPreferences.dart';
+import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 
 
 String qrcode = "";
@@ -14,6 +15,7 @@ AppUser appUser = AppUser.empty();
 UserPreferencesManager preferences = UserPreferencesManager();
 UserData userData = UserData.empty();
 DeviceInfo deviceInfo = DeviceInfo.empty();
+
 
 
 Cart cartG = Cart();
@@ -29,6 +31,8 @@ users stringToUser(String user) {
       return users.cashier;
     case "stockist":
       return users.stockist;
+    case "bartender":
+      return users.bartender;
     default:
       return users.nobody;
   }

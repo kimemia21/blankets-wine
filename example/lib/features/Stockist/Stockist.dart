@@ -120,9 +120,7 @@ class OrderItem {
 
 enum OrderStatus { pending, preparing, ready }
 
-
 class StockistMainScreen extends StatefulWidget {
-  
   @override
   _StockistMainScreenState createState() => _StockistMainScreenState();
 }
@@ -147,7 +145,7 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
     print("Connecting to socket server...");
 
     socket = IO.io(
-      'ws://167.99.15.36:8080',
+      'ws://10.68.102.36:8002',
       IO.OptionBuilder()
           .setTransports(['websocket'])
           .enableAutoConnect()
@@ -160,6 +158,7 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
     socket.onConnect((_) {
       print('Connected to server');
       socket.emit('join_shop_room', {"barId": appUser.barId});
+      socket.emit("connecting");
     });
 
     socket.on('shop_orders', (data) {
@@ -343,6 +342,7 @@ class _StockistMainScreenState extends State<StockistMainScreen> {
 
   void testEmitOrder() {
     print("Testing order emission...");
+
     socket.emit('order_created', {"barId": appUser.barId});
   }
 

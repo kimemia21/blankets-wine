@@ -1,18 +1,15 @@
-
 import 'package:blankets_and_wines_example/core/constants.dart';
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
 import 'package:blankets_and_wines_example/core/utils/initializers.dart';
-import 'package:blankets_and_wines_example/data/models/Category.dart';
+import 'package:blankets_and_wines_example/data/models/DrinkCategory.dart';
 
 import 'package:blankets_and_wines_example/data/models/Product.dart';
-import 'package:blankets_and_wines_example/data/models/ProductCategory.dart';
 import 'package:blankets_and_wines_example/features/Stockist/Stockist.dart';
 import 'package:blankets_and_wines_example/features/cashier/functions/fetchDrinks.dart';
 import 'package:blankets_and_wines_example/features/cashier/models/CartItems.dart';
 import 'package:blankets_and_wines_example/features/cashier/widgets/CartPanel.dart';
 import 'package:blankets_and_wines_example/features/cashier/widgets/MenuPanel.dart';
 import 'package:flutter/material.dart';
-
 
 class Cashier extends StatefulWidget {
   @override
@@ -21,10 +18,9 @@ class Cashier extends StatefulWidget {
 
 class _CashierState extends State<Cashier> {
   late Future<List<Product>> drinks;
-  late Future<List<DrinnksCategory>> categories;
+  late Future<List<DrinkCategory>> categories;
   List<CartItem> cart = [];
- 
- 
+
   String selectedCategory = 'All';
   String searchQuery = '';
   TextEditingController searchController = TextEditingController();
@@ -79,19 +75,16 @@ class _CashierState extends State<Cashier> {
     });
   }
 
-
   bool isLargeScreen(BuildContext context) {
     return MediaQuery.of(context).size.width > 768;
   }
 
-
-void refreshDrinks() {
-  setState(() {
-    drinks = CashierFunctions.fetchDrinks("products/${appUser.barId}"); 
-    categories = CashierFunctions.fetchCategories("ecom/categories");
-  });
-}
-
+  void refreshDrinks() {
+    setState(() {
+      drinks = CashierFunctions.fetchDrinks("products/${appUser.barId}");
+      categories = CashierFunctions.fetchCategories("ecom/categories");
+    });
+  }
 
   @override
   void initState() {
@@ -234,7 +227,6 @@ void refreshDrinks() {
     return Stack(
       children: [
         MenuPanel(
-
           products: drinks,
           categories: categories,
           selectedCategory: selectedCategory,
@@ -243,13 +235,11 @@ void refreshDrinks() {
           cart: cart,
           onCategoryChanged: (category) {
             setState(() {
-
               selectedCategory = category;
             });
           },
           onRefresh: () {
-         drinks = CashierFunctions.fetchDrinks("products/${appUser.barId}");
-    
+            drinks = CashierFunctions.fetchDrinks("products/${appUser.barId}");
           },
 
           onSearchChanged: (query) {
@@ -258,7 +248,6 @@ void refreshDrinks() {
             });
           },
           onAddToCart: addToCart,
-
         ),
         if (isCartVisible)
           Positioned.fill(
@@ -277,12 +266,12 @@ void refreshDrinks() {
                     child: Container(
                       width: MediaQuery.of(context).size.width * 0.85,
                       child: CartPanel(
-                        onPaymentConfirm:(){
+                        onPaymentConfirm: () {
                           refreshDrinks();
                           clearCart();
-                          isCartVisible=false;
-                        } ,
-                    
+                          isCartVisible = false;
+                        },
+
                         cartTotal: cartTotal,
                         isLargeScreen: false,
                         onRemoveFromCart: removeFromCart,

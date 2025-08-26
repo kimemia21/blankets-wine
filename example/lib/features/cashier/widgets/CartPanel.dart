@@ -7,7 +7,6 @@ import 'package:blankets_and_wines_example/core/theme/theme.dart';
 import 'package:blankets_and_wines_example/core/utils/ToastService.dart';
 import 'package:blankets_and_wines_example/core/utils/initializers.dart';
 import 'package:blankets_and_wines_example/core/utils/sdkinitializer.dart';
-import 'package:blankets_and_wines_example/data/models/UserRoles.dart';
 import 'package:blankets_and_wines_example/features/cashier/functions/fetchDrinks.dart';
 import 'package:blankets_and_wines_example/features/cashier/widgets/Cartitem.dart';
 import 'package:flutter/material.dart';
@@ -1333,7 +1332,7 @@ class _CartPanelState extends State<CartPanel> {
     try {
       // Socket connection for real-time updates
       Socket emitEv = IO.io(
-        'ws://167.99.15.36:8080',
+        'ws://10.68.102.36:8002',
         IO.OptionBuilder()
             .setTransports(['websocket'])
             .enableAutoConnect()

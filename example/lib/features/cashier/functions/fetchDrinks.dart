@@ -1,59 +1,146 @@
-
 import 'dart:async';
 
 import 'package:blankets_and_wines_example/core/utils/ToastService.dart';
 import 'package:blankets_and_wines_example/core/utils/initializers.dart';
-import 'package:blankets_and_wines_example/data/models/Category.dart';
-import 'package:blankets_and_wines_example/data/models/DrinkItem.dart';
+import 'package:blankets_and_wines_example/data/models/DrinkCategory.dart';
 import 'package:blankets_and_wines_example/data/models/Product.dart';
-import 'package:blankets_and_wines_example/data/models/ProductCategory.dart';
 import 'package:blankets_and_wines_example/data/services/FetchGlobals.dart';
+import 'package:blankets_and_wines_example/OFFLINE/CacheService.dart';
 import 'package:flutter/widgets.dart';
+import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 
 class CashierFunctions {
   static const int REQUEST_TIMEOUT = 25; // Reduced from 30 for faster feedback
-  static const int PAYMENT_CHECK_TIMEOUT = 12; // Shorter timeout for payment checks
-  
+  static const int PAYMENT_CHECK_TIMEOUT =
+      12; // Shorter timeout for payment checks
+
   static final List<String> categories = [
-    'All', 'Whiskey', 'Premium Whiskey', 'Vodka', 'Premium Vodka', 
-    'Brandy', 'Premium Brandy', 'Champagne', 'Premium Champagne',
-    'Wine', 'Tequila', 'Premium Tequila', 'Rum', 'Local Premium', 'Liqueur',
+    'All',
+    'Whiskey',
+    'Premium Whiskey',
+    'Vodka',
+    'Premium Vodka',
+    'Brandy',
+    'Premium Brandy',
+    'Champagne',
+    'Premium Champagne',
+    'Wine',
+    'Tequila',
+    'Premium Tequila',
+    'Rum',
+    'Local Premium',
+    'Liqueur',
   ];
 
   // ============ DATA FETCHING METHODS ============
+
+  static bool _isProductsSyncing = false;
+  static bool _isCategoriesSyncing = false;
+  
+  // Remove this line, as 'await' cannot be used at the class level.
+  // If you need to check connectivity, do it inside an async function like below:
+  
+  // Example usage inside an async function:
+  // bool result = await InternetConnection().hasInternetAccess;
+    
+  
   static Future<List<Product>> fetchDrinks(String endpoint) async {
-    try {
-      final drinks = await fetchGlobal<Product>(
-        getRequests: (endpoint) => comms.getRequests(endpoint: endpoint),
-        fromJson: (json) => Product.fromJson(json),
-        endpoint: endpoint,
-      ).timeout(Duration(seconds: REQUEST_TIMEOUT));
-      
-      return drinks;
-    } on TimeoutException {
-      throw Exception("Network timeout - please check connection");
-    } catch (e) {
-      debugPrint("fetchDrinks error: $e");
-      throw Exception("Unable to load drinks menu: ${e.toString()}");
+     bool result = await InternetConnection().hasInternetAccess;
+    
+ 
+    // Always try to get fresh data first if connected
+    if (result) {
+      try {
+        final drinks = await fetchGlobal<Product>(
+          getRequests: (endpoint) => comms.getRequests(endpoint: endpoint),
+          fromJson: (json) => Product.fromJson(json),
+          endpoint: endpoint,
+        ).timeout(Duration(seconds: REQUEST_TIMEOUT));
+
+        // Cache the fetched data (non-blocking)
+        _cacheProductsAsync(drinks);
+        print("Products fetched and being cached");
+        
+        return drinks;
+      } on TimeoutException {
+        print("Network timeout, returning cached data");
+        return CacheService.getCachedProducts();
+      } catch (e) {
+        print("fetchDrinks error: $e, returning cached data");
+        return CacheService.getCachedProducts();
+      }
+    } else {
+      print("No internet connection, returning cached data");
+      return CacheService.getCachedProducts();
     }
   }
 
-  static Future<List<DrinnksCategory>> fetchCategories(String endpoint) async {
-    try {
-      final categories = await fetchGlobal<DrinnksCategory>(
-        getRequests: (endpoint) => comms.getRequests(endpoint: endpoint),
-        fromJson: (json) => DrinnksCategory.fromJson(json),
-        endpoint: endpoint,
-      ).timeout(Duration(seconds: REQUEST_TIMEOUT));
-      
-      return categories;
-    } on TimeoutException {
-      throw Exception("Network timeout - please check connection");
-    } catch (e) {
-      debugPrint("fetchCategories error: $e");
-      throw Exception("Unable to load categories: ${e.toString()}");
+  static Future<List<DrinkCategory>> fetchCategories(String endpoint) async {
+  bool result = await InternetConnection().hasInternetAccess;
+    
+    // Always try to get fresh data first if connected
+    if (result) {
+      try {
+        final categories = await fetchGlobal<DrinkCategory>(
+          getRequests: (endpoint) => comms.getRequests(endpoint: endpoint),
+          fromJson: (json) => DrinkCategory.fromJson(json),
+          endpoint: endpoint,
+        ).timeout(Duration(seconds: REQUEST_TIMEOUT));
+
+        // Cache the fetched data (non-blocking)
+        _cacheCategoriesAsync(categories);
+        print("Categories fetched and being cached");
+        
+        return categories;
+      } on TimeoutException {
+        print("Network timeout, returning cached categories");
+        return CacheService.getCachedCategories();
+      } catch (e) {
+        print("fetchCategories error: $e, returning cached categories");
+        return CacheService.getCachedCategories();
+      }
+    } else {
+      print("No internet connection, returning cached categories");
+      return CacheService.getCachedCategories();
     }
   }
+
+  // Async caching to avoid blocking UI
+  static void _cacheProductsAsync(List<Product> products) {
+    if (_isProductsSyncing) return;
+    _isProductsSyncing = true;
+    
+    Future.microtask(() async {
+      try {
+        await CacheService.cacheProducts(products);
+      } catch (e) {
+        print("Error caching products: $e");
+      } finally {
+        _isProductsSyncing = false;
+      }
+    });
+  }
+
+  static void _cacheCategoriesAsync(List<DrinkCategory> categories) {
+    if (_isCategoriesSyncing) return;
+    _isCategoriesSyncing = true;
+    
+    Future.microtask(() async {
+      try {
+        await CacheService.cacheCategories(categories);
+      } catch (e) {
+        print("Error caching categories: $e");
+      } finally {
+        _isCategoriesSyncing = false;
+      }
+    });
+  }
+
+
+
+
+
+
 
   // ============ M-PESA PAYMENT METHODS ============
   static Future<bool> SendSdkPush(Map<String, dynamic> data) async {
@@ -66,10 +153,9 @@ class CashierFunctions {
 
       debugPrint("Sending payment request to customer: ${data['mpesaNo']}");
 
-      final resp = await comms.postRequest(
-        endpoint: "orders/order/pay",
-        data: data,
-      ).timeout(Duration(seconds: REQUEST_TIMEOUT));
+      final resp = await comms
+          .postRequest(endpoint: "orders/order/pay", data: data)
+          .timeout(Duration(seconds: REQUEST_TIMEOUT));
 
       debugPrint("Payment request response: $resp");
 
@@ -88,7 +174,6 @@ class CashierFunctions {
         _showErrorToast(errorMessage);
         return false;
       }
-
     } on TimeoutException {
       _showErrorToast("Network timeout - check connection and try again");
       return false;
@@ -106,21 +191,24 @@ class CashierFunctions {
     }
 
     try {
-      final orderStatus = await comms.getRequests(
-        endpoint: "orders/order/$orderNo",
-      ).timeout(Duration(seconds: PAYMENT_CHECK_TIMEOUT)); // Shorter timeout for checks
+      final orderStatus = await comms
+          .getRequests(endpoint: "orders/order/$orderNo")
+          .timeout(
+            Duration(seconds: PAYMENT_CHECK_TIMEOUT),
+          ); // Shorter timeout for checks
 
       // Safely extract response data
       final success = orderStatus["rsp"]?["success"] ?? false;
-      
+
       if (!success) {
-        final message = orderStatus["rsp"]?["message"] ?? "Failed to check payment status";
+        final message =
+            orderStatus["rsp"]?["message"] ?? "Failed to check payment status";
         debugPrint("Payment status check failed: $message");
         return false;
       }
 
       final paymentStatus = orderStatus["rsp"]?["data"]?["paymentStatus"];
-      
+
       if (paymentStatus == null) {
         debugPrint("Payment status not found in response");
         return false;
@@ -137,13 +225,16 @@ class CashierFunctions {
           debugPrint("❌ Payment failed for order: $orderNo");
           return false;
         default:
-          debugPrint("Unknown payment status: $paymentStatus for order: $orderNo");
+          debugPrint(
+            "Unknown payment status: $paymentStatus for order: $orderNo",
+          );
           return false;
       }
-
     } on TimeoutException {
       // Normal timeout during checking - don't show error
-      debugPrint("Payment check timeout for order: $orderNo (normal during checking)");
+      debugPrint(
+        "Payment check timeout for order: $orderNo (normal during checking)",
+      );
       return false;
     } catch (e) {
       debugPrint("confirmPayment error for order $orderNo: $e");
@@ -152,14 +243,14 @@ class CashierFunctions {
   }
 
   // ============ ENHANCED PAYMENT METHODS FOR TERMINAL USE ============
-  
+
   /// Quick payment confirmation for "Confirm Payment" button
   static Future<bool> quickConfirmPayment(String orderNo) async {
     try {
       _showInfoToast("Checking payment status...");
-      
+
       final isConfirmed = await confirmPayment(orderNo);
-      
+
       if (isConfirmed) {
         _showSuccessToast("Payment confirmed! Customer has paid.");
         return true;
@@ -167,7 +258,6 @@ class CashierFunctions {
         _showInfoToast("No payment found yet. Customer may need more time.");
         return false;
       }
-      
     } catch (e) {
       _showErrorToast("Unable to check payment status");
       return false;
@@ -180,20 +270,19 @@ class CashierFunctions {
     required String phoneNumber,
     required String amount,
   }) async {
-    
     try {
       // Step 1: First check if payment already exists (customer may have paid)
       _showInfoToast("Checking if customer already paid...");
-      
+
       final alreadyPaid = await confirmPayment(orderNo);
       if (alreadyPaid) {
         _showSuccessToast("Customer already completed payment!");
         return true;
       }
-      
+
       // Step 2: If no payment found, send new prompt
       _showInfoToast("Sending new payment request...");
-      
+
       final promptSent = await SendSdkPush({
         "orderNo": orderNo,
         "mpesaNo": phoneNumber,
@@ -208,7 +297,7 @@ class CashierFunctions {
       // Step 3: Brief check cycle (shorter than main flow)
       for (int i = 0; i < 10; i++) {
         await Future.delayed(Duration(seconds: 1));
-        
+
         final confirmed = await confirmPayment(orderNo);
         if (confirmed) {
           _showSuccessToast("Payment completed!");
@@ -216,9 +305,10 @@ class CashierFunctions {
         }
       }
 
-      _showInfoToast("Payment request sent. Continue checking manually if needed.");
+      _showInfoToast(
+        "Payment request sent. Continue checking manually if needed.",
+      );
       return false;
-
     } catch (e) {
       _showErrorToast("Error during retry: ${e.toString()}");
       return false;
@@ -267,36 +357,42 @@ class CashierFunctions {
   static String _getSpecificErrorMessage(String message, dynamic errorCode) {
     // Convert message to lowercase for easier matching
     final lowerMessage = message.toLowerCase();
-    
+
     // Check for common M-Pesa error patterns
-    if (lowerMessage.contains('invalid phone') || lowerMessage.contains('phone number')) {
+    if (lowerMessage.contains('invalid phone') ||
+        lowerMessage.contains('phone number')) {
       return 'Invalid phone number. Check customer phone and try again.';
     }
-    
-    if (lowerMessage.contains('insufficient') || lowerMessage.contains('balance')) {
+
+    if (lowerMessage.contains('insufficient') ||
+        lowerMessage.contains('balance')) {
       return 'Customer has insufficient M-Pesa balance.';
     }
-    
+
     if (lowerMessage.contains('timeout') || lowerMessage.contains('time out')) {
       return 'M-Pesa service timeout. Try again in a moment.';
     }
-    
-    if (lowerMessage.contains('duplicate') || lowerMessage.contains('already processed')) {
+
+    if (lowerMessage.contains('duplicate') ||
+        lowerMessage.contains('already processed')) {
       return 'Payment request already sent. Check payment status.';
     }
-    
-    if (lowerMessage.contains('network') || lowerMessage.contains('connection')) {
+
+    if (lowerMessage.contains('network') ||
+        lowerMessage.contains('connection')) {
       return 'Network error. Check internet connection.';
     }
-    
-    if (lowerMessage.contains('service unavailable') || lowerMessage.contains('down')) {
+
+    if (lowerMessage.contains('service unavailable') ||
+        lowerMessage.contains('down')) {
       return 'M-Pesa service temporarily unavailable.';
     }
-    
-    if (lowerMessage.contains('invalid amount') || lowerMessage.contains('amount')) {
+
+    if (lowerMessage.contains('invalid amount') ||
+        lowerMessage.contains('amount')) {
       return 'Invalid payment amount. Check order total.';
     }
-    
+
     // Error code specific messages
     if (errorCode != null) {
       switch (errorCode.toString()) {
@@ -314,7 +410,7 @@ class CashierFunctions {
           break;
       }
     }
-    
+
     // Default fallback message
     return 'Payment request failed: $message';
   }
@@ -346,7 +442,7 @@ class CashierFunctions {
   }
 
   // ============ TERMINAL OPTIMIZED UTILITIES ============
-  
+
   /// Quick validation for phone numbers with user-friendly messages
   static String? validateCustomerPhone(String phone) {
     if (phone.isEmpty) return 'Enter customer phone number';
@@ -390,7 +486,8 @@ class CashierFunctions {
   /// Check network connectivity before operations
   static Future<bool> checkNetworkConnectivity() async {
     try {
-      final response = await comms.getRequests(endpoint: "health-check")
+      final response = await comms
+          .getRequests(endpoint: "health-check")
           .timeout(Duration(seconds: 5));
       return response != null;
     } catch (e) {
@@ -406,12 +503,7 @@ class CashierFunctions {
     required String phoneNumber,
     required String amount,
   }) async {
-    
-    final result = {
-      'success': false,
-      'message': '',
-      'requiresWaiting': false,
-    };
+    final result = {'success': false, 'message': '', 'requiresWaiting': false};
 
     try {
       // Quick connectivity check
@@ -437,7 +529,6 @@ class CashierFunctions {
       result['requiresWaiting'] = true;
       result['message'] = 'Payment request sent to customer';
       return result;
-
     } catch (e) {
       result['message'] = 'Payment system error';
       return result;
@@ -447,9 +538,10 @@ class CashierFunctions {
   /// Get current system status for terminal display
   static Future<String> getSystemStatus() async {
     try {
-      final response = await comms.getRequests(endpoint: "system/status")
+      final response = await comms
+          .getRequests(endpoint: "system/status")
           .timeout(Duration(seconds: 5));
-      
+
       if (response['rsp']?['success'] == true) {
         return "System operational";
       } else {
@@ -461,18 +553,20 @@ class CashierFunctions {
   }
 
   // ============ BATCH OPERATIONS FOR EFFICIENCY ============
-  
+
   /// Pre-validate multiple orders (useful for batch processing)
-  static List<String> validateMultipleOrders(List<Map<String, dynamic>> orders) {
+  static List<String> validateMultipleOrders(
+    List<Map<String, dynamic>> orders,
+  ) {
     final errors = <String>[];
-    
+
     for (int i = 0; i < orders.length; i++) {
       final order = orders[i];
       if (!_validatePaymentData(order)) {
         errors.add("Order ${i + 1}: Invalid payment data");
       }
     }
-    
+
     return errors;
   }
 

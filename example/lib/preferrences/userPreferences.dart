@@ -1,4 +1,4 @@
-import 'package:blankets_and_wines_example/data/models/UserDataPref.dart';
+import 'package:blankets_and_wines_example/data/models/UserData.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class UserPreferencesManager {

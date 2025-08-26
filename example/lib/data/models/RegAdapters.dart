@@ -9,10 +9,7 @@ import 'ProductCategory.dart';
 import 'UserData.dart';
 // import 'UserRoles.dart';
 
-
-
 class HiveAdapters {
-  // Register all adapters
   static void registerAll() {
     if (!Hive.isAdapterRegistered(DrinkCategoryAdapter().typeId)) {
       Hive.registerAdapter(DrinkCategoryAdapter());
@@ -32,12 +29,8 @@ class HiveAdapters {
     if (!Hive.isAdapterRegistered(UserDataAdapter().typeId)) {
       Hive.registerAdapter(UserDataAdapter());
     }
-    // if (!Hive.isAdapterRegistered(UserRolesAdapter().typeId)) {
-    //   Hive.registerAdapter(UserRolesAdapter());
-    // }
   }
 
-  // Open all boxes (async)
   static Future<void> openAllBoxes() async {
     await Hive.openBox<DrinkCategory>('drinkCategories');
     await Hive.openBox<DrinkItem>('drinkItems');
@@ -45,10 +38,9 @@ class HiveAdapters {
     await Hive.openBox<Product>('products');
     await Hive.openBox<ProductCategory>('productCategories');
     await Hive.openBox<UserData>('users');
-    // await Hive.openBox<UserRoles>('userRoles');
+    await Hive.openBox('metadata'); // For sync tracking
   }
 
-  // Helper init = register + open
   static Future<void> init() async {
     registerAll();
     await openAllBoxes();

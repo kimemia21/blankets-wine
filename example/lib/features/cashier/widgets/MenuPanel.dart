@@ -1,5 +1,5 @@
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
-import 'package:blankets_and_wines_example/data/models/Category.dart';
+import 'package:blankets_and_wines_example/data/models/DrinkCategory.dart';
 import 'package:blankets_and_wines_example/data/models/Product.dart';
 import 'package:blankets_and_wines_example/features/cashier/models/CartItems.dart';
 import 'package:blankets_and_wines_example/features/cashier/widgets/DrinkItemCard.dart';
@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 
 class MenuPanel extends StatelessWidget {
   final Future<List<Product>> products;
-  final Future<List<DrinnksCategory>> categories;
+  final Future<List<DrinkCategory>> categories;
   final String selectedCategory;
   final String searchQuery;
   final TextEditingController searchController;
@@ -44,14 +44,15 @@ class MenuPanel extends StatelessWidget {
   List<Product> filterProducts(List<Product> allProducts) {
     return allProducts.where((product) {
       // Category filtering
-      bool categoryMatch = selectedCategory == 'All' ||
+      bool categoryMatch =
+          selectedCategory == 'All' ||
           product.id.toString() == selectedCategory;
-      
+
       // Search filtering
       bool searchMatch = product.name.toLowerCase().contains(
         searchQuery.toLowerCase(),
       );
-      
+
       return categoryMatch && searchMatch;
     }).toList();
   }
@@ -80,7 +81,7 @@ class MenuPanel extends StatelessWidget {
           Container(
             height: BarPOSTheme.buttonHeight,
             margin: EdgeInsets.only(bottom: BarPOSTheme.spacingL),
-            child: FutureBuilder<List<DrinnksCategory>>(
+            child: FutureBuilder<List<DrinkCategory>>(
               future: categories,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -123,9 +124,10 @@ class MenuPanel extends StatelessWidget {
                         child: ElevatedButton(
                           onPressed: () => onCategoryChanged('All'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: isSelected
-                                ? BarPOSTheme.buttonColor
-                                : BarPOSTheme.accentDark,
+                            backgroundColor:
+                                isSelected
+                                    ? BarPOSTheme.buttonColor
+                                    : BarPOSTheme.accentDark,
                             foregroundColor: BarPOSTheme.primaryText,
                             textStyle: BarPOSTheme.categoryTextStyle,
                           ),
@@ -133,17 +135,20 @@ class MenuPanel extends StatelessWidget {
                         ),
                       );
                     }
-                    
+
                     final category = categories[index - 1];
-                    final isSelected = selectedCategory == category.id.toString();
+                    final isSelected =
+                        selectedCategory == category.id.toString();
                     return Container(
                       margin: EdgeInsets.only(right: BarPOSTheme.spacingS),
                       child: ElevatedButton(
-                        onPressed: () => onCategoryChanged(category.id.toString()),
+                        onPressed:
+                            () => onCategoryChanged(category.id.toString()),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: isSelected
-                              ? BarPOSTheme.buttonColor
-                              : BarPOSTheme.accentDark,
+                          backgroundColor:
+                              isSelected
+                                  ? BarPOSTheme.buttonColor
+                                  : BarPOSTheme.accentDark,
                           foregroundColor: BarPOSTheme.primaryText,
                           textStyle: BarPOSTheme.categoryTextStyle,
                         ),
@@ -217,22 +222,20 @@ class MenuPanel extends StatelessWidget {
                   }
 
                   if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return _buildEmptyState(
-                      context,
-                      'No products available',
-                    );
+                    return _buildEmptyState(context, 'No products available');
                   }
 
                   // Filter products based on selected category and search query
                   final filteredProducts = filterProducts(snapshot.data!);
 
                   if (filteredProducts.isEmpty) {
-                    final message = searchQuery.isNotEmpty
-                        ? 'No products found for "$searchQuery"'
-                        : selectedCategory != 'All'
+                    final message =
+                        searchQuery.isNotEmpty
+                            ? 'No products found for "$searchQuery"'
+                            : selectedCategory != 'All'
                             ? 'No products in this category'
                             : 'No products found';
-                    
+
                     return _buildEmptyState(context, message);
                   }
 

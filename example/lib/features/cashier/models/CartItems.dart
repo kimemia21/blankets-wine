@@ -1,4 +1,4 @@
-import 'package:blankets_and_wines_example/data/models/DrinkItem.dart';
+
 import 'package:blankets_and_wines_example/data/models/Product.dart';
 
 class CartItem {

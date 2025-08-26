@@ -3,14 +3,17 @@ import 'package:blankets_and_wines_example/core/theme/theme.dart';
 import 'package:blankets_and_wines_example/core/utils/Comms.dart';
 import 'package:blankets_and_wines_example/core/utils/ToastService.dart';
 import 'package:blankets_and_wines_example/core/utils/initializers.dart';
+import 'package:blankets_and_wines_example/data/models/UserData.dart';
 import 'package:blankets_and_wines_example/data/models/UserRoles.dart';
 import 'package:blankets_and_wines_example/data/services/FetchGlobals.dart';
+import 'package:blankets_and_wines_example/features/OnlineBar.dart/BartenderOnline.dart';
 import 'package:blankets_and_wines_example/features/Stockist/Stockist.dart';
 import 'package:blankets_and_wines_example/features/cashier/Auth/authfunc.dart';
 import 'package:blankets_and_wines_example/features/cashier/main/CashierMain.dart';
 import 'package:blankets_and_wines_example/onBoarding/OnBoarding.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -115,49 +118,89 @@ class _LoginPageState extends State<LoginPage>
     }
   }
 
-  Future<void> _handleLogin() async {
-    if (!_formKey.currentState!.validate()) return;
+Future<void> _handleLogin() async {
+  if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+  setState(() => _isLoading = true);
 
-    try {
-      Map<String, dynamic> data = {
-        "username": _phoneNumberController.text,
-        "password": _passwordController.text,
-        "role": (await preferences.getUserRoleId()),
-      };
-      bool login = await CashierAuth.login(data: data);
-      if (login) {
-        await preferences.saveUserData(
-          userRole: _userRole!,
-          username: _phoneNumberController.text,
-          password: _passwordController.text,
-          phoneNumber: _phoneNumberController.text,
-          userRoleId: (await preferences.getUserRoleId()) ?? 0,
-        );
-        print(await preferences.getUserData());
-
-        userData = (await preferences.getUserData())!;
-
-        setState(() => _isLoading = false);
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder:
-                (context) => homepageNavigator(stringToUser(userData.userRole)),
-          ),
-        );
-      } else {
-        setState(() => _isLoading = false);
-        print("Failed");
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+  try {
+    // Check if internet is available
+    // If not, check if we have user details stored in preferences
+    // If we have user details, allow login
+    bool hasInternet = await InternetConnection().hasInternetAccess;
+    
+    if (!hasInternet) {
+      await _handleOfflineLogin();
+    } else {
+      await _handleOnlineLogin();
+    }
+  } finally {
+    if (mounted) {
+      setState(() => _isLoading = false);
     }
   }
+}
+// offline login handler 
+Future<void> _handleOfflineLogin() async {
+  if (await preferences.isUserLoggedIn()) {
+    userData = (await preferences.getUserData())!;
+
+    if (_phoneNumberController.text.trim() == userData.phoneNumber &&
+        _passwordController.text.trim() == userData.password) {
+      setState(() => _isLoading = false);
+
+      ToastService.showSuccess("No internet, but logged in locally");
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => homepageNavigator(stringToUser(_userRole!)),
+        ),
+      );
+    } else {
+      setState(() => _isLoading = false);
+      ToastService.showError("Invalid credentials");
+    }
+  } else {
+    setState(() => _isLoading = false);
+    ToastService.showError("No internet connection and no saved credentials");
+  }
+}
+
+Future<void> _handleOnlineLogin() async {
+  Map<String, dynamic> data = {
+    "username": _phoneNumberController.text,
+    "password": _passwordController.text,
+    "role": (await preferences.getUserRoleId()),
+  };
+
+  bool loginSuccess = await CashierAuth.login(data: data);
+  
+  if (loginSuccess) {
+    await preferences.saveUserData(
+      userRole: _userRole!,
+      username: _phoneNumberController.text,
+      password: _passwordController.text,
+      phoneNumber: _phoneNumberController.text,
+      userRoleId: (await preferences.getUserRoleId()) ?? 0,
+    );
+
+    userData = (await preferences.getUserData())!;
+
+    setState(() => _isLoading = false);
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => homepageNavigator(stringToUser(userData.userRole)),
+      ),
+    );
+  } else {
+    setState(() => _isLoading = false);
+    ToastService.showError("Login failed");
+  }
+}
+
+
 
   Widget homepageNavigator(users user) {
     switch (user) {
@@ -165,6 +208,9 @@ class _LoginPageState extends State<LoginPage>
         return Cashier();
       case users.stockist:
         return StockistMainScreen();
+      case users.bartender:
+        return BartenderPage();
+
       default:
         return Cashier();
     }
@@ -203,18 +249,20 @@ class _LoginPageState extends State<LoginPage>
         height: MediaQuery.of(context).size.height,
         color: BarPOSTheme.secondaryDark,
         child: SafeArea(
-          child: _isDataLoaded
-              ? AnimatedBuilder(
-                  animation: _animationController,
-                  builder: (context, child) => Opacity(
-                    opacity: _fadeAnimation.value,
-                    child: Transform.translate(
-                      offset: _slideAnimation.value * 50,
-                      child: _buildContent(theme, colorScheme),
-                    ),
-                  ),
-                )
-              : _buildLoadingWidget(),
+          child:
+              _isDataLoaded
+                  ? AnimatedBuilder(
+                    animation: _animationController,
+                    builder:
+                        (context, child) => Opacity(
+                          opacity: _fadeAnimation.value,
+                          child: Transform.translate(
+                            offset: _slideAnimation.value * 50,
+                            child: _buildContent(theme, colorScheme),
+                          ),
+                        ),
+                  )
+                  : _buildLoadingWidget(),
         ),
       ),
     );
@@ -262,7 +310,9 @@ class _LoginPageState extends State<LoginPage>
           const SizedBox(height: 8),
 
           Text(
-            userDesc(stringToUser(_userRole ?? 'cashier')), // Provide default value
+            userDesc(
+              stringToUser(_userRole ?? 'cashier'),
+            ), // Provide default value
             style: TextStyle(
               fontSize: 16,
               color: Colors.white.withOpacity(0.9),

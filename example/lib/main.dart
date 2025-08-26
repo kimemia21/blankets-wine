@@ -4,26 +4,37 @@ import 'dart:async';
 import 'package:blankets_and_wines_example/core/utils/ToastService.dart';
 import 'package:blankets_and_wines_example/core/utils/initializers.dart';
 import 'package:blankets_and_wines_example/core/utils/sdkinitializer.dart';
+import 'package:blankets_and_wines_example/data/models/RegAdapters.dart';
 import 'package:blankets_and_wines_example/features/cashier/Auth/Login.dart';
+import 'package:blankets_and_wines_example/offline/BackGroundService.dart';
+import 'package:blankets_and_wines_example/offline/Connectivty.dart';
 import 'package:blankets_and_wines_example/onBoarding/OnBoarding.dart';
-import 'package:blankets_and_wines_example/playground/BluetoothComms.dart';
-import 'package:blankets_and_wines_example/playground/PrintDummy.dart';
 import 'package:blankets_and_wines_example/widgets/Alerts.dart';
 import 'package:flutter/material.dart';
 import 'package:drift/drift.dart' as drift;
-import 'database/database.dart';
-import 'database/dao/categories_dao.dart';
-import 'database/dao/products_dao.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize SDK and preferences first
+  await Hive.initFlutter();
+  await HiveAdapters.init();
+  
+  // Open metadata box for sync tracking
+  await Hive.openBox('metadata');
+  
+
+  await BackgroundSyncService.initialize();
+  
   await sdkInitializer();
   await preferences.init();
 
   runApp(MyApp());
 }
+
+
 
 Future<bool> isLoggedin() async {
   try {
@@ -48,16 +59,40 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   // Track SDK check status
   bool _sdkCheckCompleted = false;
   bool _isInitializing = true;
 
-  @override
+
+
+ @override
   void initState() {
     super.initState();
-    // Initialize the app state
-    _initializeApp();
+    WidgetsBinding.instance.addObserver(this);
+     _initializeApp();
+  }
+
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    // Clean up services when app is closed
+    ConnectivityService().dispose();
+    BackgroundSyncService.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Optimize background sync based on app state
+    if (state == AppLifecycleState.paused) {
+      // App is in background, reduce sync frequency
+      BackgroundSyncService.backgroundTimer?.cancel();
+    } else if (state == AppLifecycleState.resumed) {
+      // App is active, resume normal sync frequency
+      BackgroundSyncService.startBackgroundTimer();
+    }
   }
 
   Future<void> _initializeApp() async {
@@ -179,9 +214,11 @@ class _MyAppState extends State<MyApp> {
       navigatorKey: ToastService.navigatorKey,
       title: 'Blankets and Wines',
       debugShowCheckedModeBanner: false,
-      home:
+      home: 
+      // Cashier()
+      // BartenderPage()
       // DummyPrintPage(),
-      _buildHome(),
+    _buildHome(),
     );
   }
 
