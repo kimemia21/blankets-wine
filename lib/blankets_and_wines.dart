@@ -496,6 +496,19 @@ class DeviceInfo {
     required this.isCharging,
     required this.temperature,
   });
+
+ factory DeviceInfo.empty() {
+    return DeviceInfo(
+      model: 'Unknown Model',
+      serialNumber: 'N/A',
+      firmwareVersion: 'Not Available',
+      sdkVersion: 'Not Available',
+      batteryLevel: -1,          // -1 to indicate "no battery info"
+      isCharging: false,
+      temperature: double.nan,   // NaN can signal "no temperature data"
+    );
+  }
+
   
   factory DeviceInfo.fromMap(Map<String, dynamic> map) {
     return DeviceInfo(
