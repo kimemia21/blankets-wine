@@ -65,6 +65,38 @@ class SmartposPlugin {
       throw SmartPosException('Failed to close device: ${e.message}');
     }
   }
+
+  // lcd display text
+static Future<Map<String, dynamic>> showTextOnLcd({
+    required String text,
+    int x = 0,
+    int y = 0,
+    bool clear = false,
+  }) async {
+    try {
+      print("Showing on LCD: $text at ($x,$y), clear: $clear");
+      
+      final result = await _channel.invokeMethod('showTextOnLcd', {
+        'text': text,
+        'x': x,
+        'y': y,
+        'clear': clear,
+      });
+      
+      return Map<String, dynamic>.from(result);
+    } on PlatformException catch (e) {
+      return {
+        'success': false,
+        'message': 'Platform error: ${e.message}',
+        'error': e.code,
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Unknown error: $e',
+      };
+    }
+  }
   
   /// Get detailed device information
   static Future<DeviceInfo> getDeviceInfo() async {

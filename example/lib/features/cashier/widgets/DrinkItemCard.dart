@@ -1,7 +1,9 @@
 import 'package:blankets_and_wines_example/core/constants.dart';
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
+import 'package:blankets_and_wines_example/core/utils/initializers.dart';
 import 'package:blankets_and_wines_example/data/models/DrinkItem.dart';
 import 'package:blankets_and_wines_example/data/models/Product.dart';
+import 'package:blankets_and_wines_example/features/cashier/models/CartItems.dart';
 import 'package:flutter/material.dart';
 
 class DrinkItemCard extends StatelessWidget {
@@ -37,10 +39,32 @@ class DrinkItemCard extends StatelessWidget {
     double badgeFontSize = isCompactDevice ? 16.0 : (isTabletDevice ? 18.0 : 20.0);
 
 
-    print("product infor ${drink.toJson()}");
+    // print("product infor ${drink.toJson()}");
 
     return GestureDetector(
-      onTap:drink.stock<0?null:onTap,
+ onTap: () {
+  final existingItem = cartG.items.firstWhere(
+    (item) => item.drink.id == drink.id,
+    orElse: () => CartItem(drink: drink, quantity: 0),
+  );
+
+  final currentQty = existingItem.quantity;
+  final maxQty = drink.stock; // You can also use drink.reorderLevel if needed
+  print("=======$maxQty=========");
+  print("=============$currentQty======");
+
+  if (currentQty < maxQty) {
+    // ✅ Safe to add
+    onTap();  
+  } else {
+    // ❌ Block adding, maybe show a message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Stock limit reached for ${drink.name}")),
+    );
+  }
+
+        // drink.stock<0?null:onTap
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(

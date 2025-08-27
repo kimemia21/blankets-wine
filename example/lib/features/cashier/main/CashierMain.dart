@@ -1,6 +1,8 @@
+import 'package:blankets_and_wines/blankets_and_wines.dart';
 import 'package:blankets_and_wines_example/core/constants.dart';
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
 import 'package:blankets_and_wines_example/core/utils/initializers.dart';
+import 'package:blankets_and_wines_example/core/utils/sdkinitializer.dart';
 import 'package:blankets_and_wines_example/data/models/DrinkCategory.dart';
 
 import 'package:blankets_and_wines_example/data/models/Product.dart';
@@ -30,32 +32,61 @@ class _CashierState extends State<Cashier> {
   double get cartTotal {
     return cart.fold(0.0, (sum, item) => sum + item.totalPrice);
   }
-
-  void addToCart(Product drink) {
-    setState(() {
-      final existingItemIndex = cart.indexWhere(
-        (item) => item.drink.id == drink.id,
-      );
-
-      if (existingItemIndex >= 0) {
-        cart[existingItemIndex].quantity++;
+  Future<void> showTotalNoLcd(String text, bool istotal) async {
+    try {
+      final sdk = await sdkInitializer();
+      if (sdk['success']) {
+        final formattedTotal =istotal? formatWithCommas(text):text;
+        final result = await SmartposPlugin.showTextOnLcd(
+          text: istotal?'Total:KSH $formattedTotal': text,
+          x: 0,
+          y: 0,
+          clear: true,
+        );
+        if (result['success'] == true) {
+          print('Text displayed on LCD successfully.');
+        } else {
+          print('Failed to display text on LCD: ${result['message']}');
+        }
       } else {
-        cart.add(CartItem(drink: drink));
-        cartG.items = cart;
-        print(cartG.toOrderFormat());
+        print('SDK initialization failed: ${sdk['msg']}');
       }
-    });
+    } catch (e) {
+      print('Error displaying text on LCD: $e');
+    }
   }
 
-  void removeFromCart(int drinkId) {
+void addToCart(Product drink) async {
+  // First, update the cart state synchronously
+  setState(() {
+    final existingItemIndex = cart.indexWhere(
+      (item) => item.drink.id == drink.id,
+    );
+
+    if (existingItemIndex >= 0) {
+      cart[existingItemIndex].quantity++;
+    } else {
+      cart.add(CartItem(drink: drink));
+      
+      cartG.items = cart;
+      print(cartG.toOrderFormat());
+    }
+  });
+
+  // Then, perform async LCD operation after setState completes
+  await showTotalNoLcd(cartTotal.toStringAsFixed(0), true);
+}
+
+  void removeFromCart(int drinkId) async{
     debugPrint("Removed item $drinkId");
     setState(() {
       cart.removeWhere((item) => item.drink.id == drinkId);
       cartG.items = cart;
     });
+    await showTotalNoLcd(cartTotal.toStringAsFixed(0), true);
   }
 
-  void updateQuantity(int drinkId, int newQuantity) {
+  void updateQuantity(int drinkId, int newQuantity) async{
     setState(() {
       if (newQuantity <= 0) {
         removeFromCart(drinkId);
@@ -66,13 +97,17 @@ class _CashierState extends State<Cashier> {
         cartG.items = cart;
       }
     });
+    await showTotalNoLcd(cartTotal.toStringAsFixed(0), true);
   }
 
-  void clearCart() {
+  void clearCart() async{
     setState(() {
       cart.clear();
+
       cartG.items = cart;
+
     });
+     await showTotalNoLcd("Welcome",false);
   }
 
   bool isLargeScreen(BuildContext context) {

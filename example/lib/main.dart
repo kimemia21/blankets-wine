@@ -78,7 +78,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     // Clean up services when app is closed
-    ConnectivityService().dispose();
+    // ConnectivityService().dispose();
     BackgroundSyncService.dispose();
     super.dispose();
   }

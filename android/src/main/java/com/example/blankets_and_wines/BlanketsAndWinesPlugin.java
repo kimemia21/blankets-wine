@@ -180,10 +180,19 @@ private EditText scanResultEditText;
 
     @Override
     public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
+    String text  = call.argument("text");
         switch (call.method) {
             case "initializeDevice":
                 initializeDevice(result);
                 break;
+            case "showTextOnLcd":
+       
+            Integer x = call.argument("x");
+            Integer y = call.argument("y");
+            Boolean clear = call.argument("clear");
+            showTextOnLcd(text, x != null ? x : 0, y != null ? y : 0, clear != null ? clear : true, result);
+            break;
+
             case "openDevice":
                 openDevice(result);
                 break;
@@ -197,7 +206,7 @@ private EditText scanResultEditText;
                 getDeviceStatus(result);
                 break;
             case "printText":
-                String text = call.argument("text");
+                // String text = call.argument("text");
                 printText(text, result);
                 break;
             case "printReceipt":
@@ -378,6 +387,53 @@ private void initializeDevice(Result result) {
             }
         });
     }
+
+
+    // lcd screen show text on it  
+
+private void showTextOnLcd(String text, int x, int y, boolean clear, Result result) {
+    if (!checkDeviceReady(result)) return;
+    
+    if (text == null || text.trim().isEmpty()) {
+        result.error("INVALID_INPUT", "Text cannot be null or empty", null);
+        return;
+    }
+    
+    executor.execute(() -> {
+        try {
+            Log.d(TAG, "Displaying text on LCD: " + text);
+            
+            // Use the single thread executor like in the original code
+            mDriverManager.getSingleThreadExecutor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    int status = mSys.showStringOnLcd(x, y, text, clear);
+                    
+                    mainHandler.post(() -> {
+                        if (status == SdkResult.SDK_OK) {
+                            Map<String, Object> response = new HashMap<>();
+                            response.put("success", true);
+                            response.put("message", "Text displayed on LCD successfully");
+                            result.success(response);
+                        } else {
+                            result.error("LCD_ERROR", "Failed to show text on LCD. Status: " + status, null);
+                        }
+                    });
+                }
+            });
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to show text on LCD", e);
+            mainHandler.post(() -> {
+                result.error("LCD_ERROR", "Failed to show text on LCD: " + e.getMessage(), null);
+            });
+        }
+    });
+}
+
+
+
+
 
     // We are working on this 
 

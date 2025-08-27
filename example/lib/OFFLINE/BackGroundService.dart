@@ -71,9 +71,10 @@ class BackgroundSyncService {
       return;
     }
 
-    final connectivityService = ConnectivityService();
+  bool result = await InternetConnection().hasInternetAccess;
+    
 
-    if (!connectivityService.isConnected) {
+    if (!result) {
       print("No internet connection, skipping sync");
       return;
     }
