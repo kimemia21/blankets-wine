@@ -25,13 +25,15 @@ class ProductAdapter extends TypeAdapter<Product> {
       bar: fields[5] as String,
       stock: fields[6] as int,
       isDiscount: fields[7] as bool,
+      lastModified: fields[8] as DateTime?,
+      lastModifiedBy: fields[9] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Product obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -47,7 +49,11 @@ class ProductAdapter extends TypeAdapter<Product> {
       ..writeByte(6)
       ..write(obj.stock)
       ..writeByte(7)
-      ..write(obj.isDiscount);
+      ..write(obj.isDiscount)
+      ..writeByte(8)
+      ..write(obj.lastModified)
+      ..writeByte(9)
+      ..write(obj.lastModifiedBy);
   }
 
   @override

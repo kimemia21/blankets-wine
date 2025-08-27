@@ -23,6 +23,9 @@ String baseUrl =
 // "http://192.168.100.56:8002/api/v1";
  "http://167.99.15.36:8080/api/v1";
 
+String mode = "online"; // online or offline
+
+
 users stringToUser(String user) {
   switch (user.toLowerCase()) {
     case "nobody":

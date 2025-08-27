@@ -1,3 +1,5 @@
+import 'package:blankets_and_wines_example/data/models/ProductChangeLog.dart';
+import 'package:blankets_and_wines_example/data/models/Restock.dart';
 import 'package:hive/hive.dart';
 
 // Import all generated adapters
@@ -7,7 +9,6 @@ import 'DrinkOrder.dart';
 import 'Product.dart';
 import 'ProductCategory.dart';
 import 'UserData.dart';
-// import 'UserRoles.dart';
 
 class HiveAdapters {
   static void registerAll() {
@@ -29,6 +30,13 @@ class HiveAdapters {
     if (!Hive.isAdapterRegistered(UserDataAdapter().typeId)) {
       Hive.registerAdapter(UserDataAdapter());
     }
+    if (!Hive.isAdapterRegistered(RestockAdapter().typeId)) {
+      Hive.registerAdapter(RestockAdapter());
+    }
+    // MISSING: Add ProductChangeLog adapter
+    if (!Hive.isAdapterRegistered(ProductChangeLogAdapter().typeId)) {
+      Hive.registerAdapter(ProductChangeLogAdapter());
+    }
   }
 
   static Future<void> openAllBoxes() async {
@@ -38,7 +46,9 @@ class HiveAdapters {
     await Hive.openBox<Product>('products');
     await Hive.openBox<ProductCategory>('productCategories');
     await Hive.openBox<UserData>('users');
-    await Hive.openBox('metadata'); // For sync tracking
+    await Hive.openBox<Restock>('restock');
+    await Hive.openBox<ProductChangeLog>('productChangeLogs');
+    await Hive.openBox('metadata');
   }
 
   static Future<void> init() async {

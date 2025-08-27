@@ -1,4 +1,5 @@
 import 'package:blankets_and_wines/blankets_and_wines.dart';
+import 'package:blankets_and_wines_example/OFFLINE/RestockPage.dart';
 import 'package:blankets_and_wines_example/core/constants.dart';
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
 import 'package:blankets_and_wines_example/core/utils/initializers.dart';
@@ -32,13 +33,14 @@ class _CashierState extends State<Cashier> {
   double get cartTotal {
     return cart.fold(0.0, (sum, item) => sum + item.totalPrice);
   }
+
   Future<void> showTotalNoLcd(String text, bool istotal) async {
     try {
       final sdk = await sdkInitializer();
       if (sdk['success']) {
-        final formattedTotal =istotal? formatWithCommas(text):text;
+        final formattedTotal = istotal ? formatWithCommas(text) : text;
         final result = await SmartposPlugin.showTextOnLcd(
-          text: istotal?'Total:KSH $formattedTotal': text,
+          text: istotal ? 'Total:KSH $formattedTotal' : text,
           x: 0,
           y: 0,
           clear: true,
@@ -56,28 +58,28 @@ class _CashierState extends State<Cashier> {
     }
   }
 
-void addToCart(Product drink) async {
-  // First, update the cart state synchronously
-  setState(() {
-    final existingItemIndex = cart.indexWhere(
-      (item) => item.drink.id == drink.id,
-    );
+  void addToCart(Product drink) async {
+    // First, update the cart state synchronously
+    setState(() {
+      final existingItemIndex = cart.indexWhere(
+        (item) => item.drink.id == drink.id,
+      );
 
-    if (existingItemIndex >= 0) {
-      cart[existingItemIndex].quantity++;
-    } else {
-      cart.add(CartItem(drink: drink));
-      
-      cartG.items = cart;
-      print(cartG.toOrderFormat());
-    }
-  });
+      if (existingItemIndex >= 0) {
+        cart[existingItemIndex].quantity++;
+      } else {
+        cart.add(CartItem(drink: drink));
 
-  // Then, perform async LCD operation after setState completes
-  await showTotalNoLcd(cartTotal.toStringAsFixed(0), true);
-}
+        cartG.items = cart;
+        print(cartG.toOrderFormat());
+      }
+    });
 
-  void removeFromCart(int drinkId) async{
+    // Then, perform async LCD operation after setState completes
+    await showTotalNoLcd(cartTotal.toStringAsFixed(0), true);
+  }
+
+  void removeFromCart(int drinkId) async {
     debugPrint("Removed item $drinkId");
     setState(() {
       cart.removeWhere((item) => item.drink.id == drinkId);
@@ -86,7 +88,7 @@ void addToCart(Product drink) async {
     await showTotalNoLcd(cartTotal.toStringAsFixed(0), true);
   }
 
-  void updateQuantity(int drinkId, int newQuantity) async{
+  void updateQuantity(int drinkId, int newQuantity) async {
     setState(() {
       if (newQuantity <= 0) {
         removeFromCart(drinkId);
@@ -100,14 +102,13 @@ void addToCart(Product drink) async {
     await showTotalNoLcd(cartTotal.toStringAsFixed(0), true);
   }
 
-  void clearCart() async{
+  void clearCart() async {
     setState(() {
       cart.clear();
 
       cartG.items = cart;
-
     });
-     await showTotalNoLcd("Welcome",false);
+    await showTotalNoLcd("Welcome", false);
   }
 
   bool isLargeScreen(BuildContext context) {
@@ -138,19 +139,39 @@ void addToCart(Product drink) async {
       home: Scaffold(
         appBar: AppBar(
           title: Text('Cashier System'),
-          leading: IconButton(
-            icon: Icon(Icons.bug_report),
+          leading:
+          // mode =="online"? Icon(Icons.wifi):Icon(color: Colors.red, Icons.wifi_off),
+          IconButton(
+            icon:
+                mode == "online"
+                    ? Icon(Icons.wifi)
+                    : Icon(Icons.wifi_off, color: Colors.red),
             onPressed: () {
               setState(() {
                 istappedThree++;
                 if (istappedThree >= 3) {
+                  Navigator.pushReplacement(context,
+                      MaterialPageRoute(builder: (context) => RestockPage()));
+
+                  // showBottomSheet(
+                  //   context: context,
+                  //   builder: (context) {
+                  //     return Container(
+                  //       color: BarPOSTheme.accentDark,
+                  //       height: MediaQuery.of(context).size.height * 0.85,
+                  //       child: Center(child: RestockPage()),
+                  //     );
+                  //   },
+                  // );
                   print("Debug mode activated");
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => StockistMainScreen(),
-                    ),
-                  );
+                  mode = "debug";
+
+                  // Navigator.push(
+                  //   context,
+                  //   MaterialPageRoute(
+                  //     builder: (context) => StockistMainScreen(),
+                  //   ),
+                  // );
                   istappedThree = 0;
                 }
               });

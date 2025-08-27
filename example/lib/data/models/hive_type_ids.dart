@@ -11,5 +11,7 @@ class HiveTypeId {
   // 🔹 Product-related models (20–29)
   static const product = 20;
   static const productCategory = 21;
-  
+  static const  restock = 22;
+  static const productChangeLog = 23;
+
 }

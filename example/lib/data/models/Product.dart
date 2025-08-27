@@ -5,29 +5,35 @@ part 'Product.g.dart';
 @HiveType(typeId: HiveTypeId.product)
 class Product extends HiveObject {
   @HiveField(0)
-  final int id;
+  final int id; // ID should remain immutable
 
   @HiveField(1)
-  final String name;
+  String name; // Allow updates for name changes
 
   @HiveField(2)
-  final String image;
+  String image; // Allow image updates
 
-  /// Kept as string since JSON returns values like "4500.00"
   @HiveField(3)
-  final String price;
+  String price; // Allow price updates
 
   @HiveField(4)
-  final int category;
+  final int category; // Category rarely changes, but could be mutable
 
   @HiveField(5)
-  final String bar;
+  final String bar; // Bar assignment rarely changes
 
   @HiveField(6)
-  final int stock;
+  int stock; // ⚡ CRITICAL: Must be mutable for stock updates
 
   @HiveField(7)
-  final bool isDiscount;
+  bool isDiscount; // Allow discount status changes
+
+  // Add fields for tracking changes
+  @HiveField(8)
+  DateTime? lastModified;
+
+  @HiveField(9)
+  String? lastModifiedBy;
 
   Product({
     required this.id,
@@ -38,6 +44,8 @@ class Product extends HiveObject {
     required this.bar,
     required this.stock,
     required this.isDiscount,
+    this.lastModified,
+    this.lastModifiedBy,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -51,7 +59,11 @@ class Product extends HiveObject {
       stock: json['stock'] ?? 0,
       isDiscount: json['is_discount'] is bool
           ? json['is_discount']
-          : (json['is_discount'] == 1), // handles int or bool
+          : (json['is_discount'] == 1),
+      lastModified: json['last_modified'] != null 
+          ? DateTime.tryParse(json['last_modified']) 
+          : null,
+      lastModifiedBy: json['last_modified_by'],
     );
   }
 
@@ -65,6 +77,65 @@ class Product extends HiveObject {
       'bar': bar,
       'stock': stock,
       'is_discount': isDiscount,
+      'last_modified': lastModified?.toIso8601String(),
+      'last_modified_by': lastModifiedBy,
     };
   }
+
+  // Convenience methods for updates
+  void updateStock(int newStock, String updatedBy) {
+    stock = newStock;
+    lastModified = DateTime.now();
+    lastModifiedBy = updatedBy;
+    save(); // Auto-save to Hive
+  }
+
+  void addStock(int quantity, String updatedBy) {
+    stock += quantity;
+    lastModified = DateTime.now();
+    lastModifiedBy = updatedBy;
+    save();
+  }
+
+  void removeStock(int quantity, String updatedBy) {
+    stock = (stock - quantity).clamp(0, double.infinity).toInt();
+    lastModified = DateTime.now();
+    lastModifiedBy = updatedBy;
+    save();
+  }
+
+  void updatePrice(String newPrice, String updatedBy) {
+    price = newPrice;
+    lastModified = DateTime.now();
+    lastModifiedBy = updatedBy;
+    save();
+  }
+
+  void toggleDiscount(String updatedBy) {
+    isDiscount = !isDiscount;
+    lastModified = DateTime.now();
+    lastModifiedBy = updatedBy;
+    save();
+  }
+
+  // Helper getters
+  double get priceAsDouble => double.tryParse(price) ?? 0.0;
+  bool get hasStock => stock > 0;
+  bool get isLowStock => stock < 10; // Configurable threshold
+  
+  // For debugging and logs
+  @override
+  String toString() {
+    return 'Product(id: $id, name: $name, stock: $stock, price: $price)';
+  }
+
+  // Equality based on ID only
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Product && other.id == id;
+  }
+
+  @override
+  int get hashCode => id.hashCode;
 }

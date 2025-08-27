@@ -50,6 +50,8 @@ class CashierFunctions {
  
     // Always try to get fresh data first if connected
     if (result) {
+      mode = "online";
+
       try {
         final drinks = await fetchGlobal<Product>(
           getRequests: (endpoint) => comms.getRequests(endpoint: endpoint),
@@ -71,6 +73,7 @@ class CashierFunctions {
       }
     } else {
       print("No internet connection, returning cached data");
+      mode = "offline";
       return CacheService.getCachedProducts();
     }
   }
@@ -80,6 +83,7 @@ class CashierFunctions {
     
     // Always try to get fresh data first if connected
     if (result) {
+      mode = "online";
       try {
         final categories = await fetchGlobal<DrinkCategory>(
           getRequests: (endpoint) => comms.getRequests(endpoint: endpoint),
@@ -101,6 +105,7 @@ class CashierFunctions {
       }
     } else {
       print("No internet connection, returning cached categories");
+      mode = "offline";
       return CacheService.getCachedCategories();
     }
   }
