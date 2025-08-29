@@ -1,4 +1,5 @@
 enum users { nobody, cashier, stockist, bartender }
+enum Modes { online, offline }
 
 users user =users.nobody;
 

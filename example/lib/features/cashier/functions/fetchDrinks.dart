@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:blankets_and_wines_example/core/constants.dart';
 import 'package:blankets_and_wines_example/core/utils/ToastService.dart';
 import 'package:blankets_and_wines_example/core/utils/initializers.dart';
 import 'package:blankets_and_wines_example/data/models/DrinkCategory.dart';
@@ -50,7 +51,7 @@ class CashierFunctions {
  
     // Always try to get fresh data first if connected
     if (result) {
-      mode = "online";
+      mode = Modes.online;
 
       try {
         final drinks = await fetchGlobal<Product>(
@@ -73,7 +74,7 @@ class CashierFunctions {
       }
     } else {
       print("No internet connection, returning cached data");
-      mode = "offline";
+      mode = Modes.offline;
       return CacheService.getCachedProducts();
     }
   }
@@ -83,7 +84,7 @@ class CashierFunctions {
     
     // Always try to get fresh data first if connected
     if (result) {
-      mode = "online";
+      mode = Modes.online;
       try {
         final categories = await fetchGlobal<DrinkCategory>(
           getRequests: (endpoint) => comms.getRequests(endpoint: endpoint),
@@ -105,7 +106,7 @@ class CashierFunctions {
       }
     } else {
       print("No internet connection, returning cached categories");
-      mode = "offline";
+      mode = Modes.offline;
       return CacheService.getCachedCategories();
     }
   }

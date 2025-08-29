@@ -5,9 +5,7 @@ import 'package:blankets_and_wines_example/core/theme/theme.dart';
 import 'package:blankets_and_wines_example/core/utils/initializers.dart';
 import 'package:blankets_and_wines_example/core/utils/sdkinitializer.dart';
 import 'package:blankets_and_wines_example/data/models/DrinkCategory.dart';
-
 import 'package:blankets_and_wines_example/data/models/Product.dart';
-import 'package:blankets_and_wines_example/features/Stockist/Stockist.dart';
 import 'package:blankets_and_wines_example/features/cashier/functions/fetchDrinks.dart';
 import 'package:blankets_and_wines_example/features/cashier/models/CartItems.dart';
 import 'package:blankets_and_wines_example/features/cashier/widgets/CartPanel.dart';
@@ -143,7 +141,7 @@ class _CashierState extends State<Cashier> {
           // mode =="online"? Icon(Icons.wifi):Icon(color: Colors.red, Icons.wifi_off),
           IconButton(
             icon:
-                mode == "online"
+                mode == Modes.online
                     ? Icon(Icons.wifi)
                     : Icon(Icons.wifi_off, color: Colors.red),
             onPressed: () {
@@ -164,7 +162,7 @@ class _CashierState extends State<Cashier> {
                   //   },
                   // );
                   print("Debug mode activated");
-                  mode = "debug";
+                  mode = Modes.offline;
 
                   // Navigator.push(
                   //   context,
@@ -206,14 +204,14 @@ class _CashierState extends State<Cashier> {
                           ),
                         ),
                         constraints: BoxConstraints(
-                          minWidth: 28, // Increased minimum width
-                          minHeight: 28, // Increased minimum height
+                          minWidth: 28, 
+                          minHeight: 28,
                         ),
                         child: Text(
                           '${cart.length}',
                           style: TextStyle(
                             color: BarPOSTheme.primaryText,
-                            fontSize: 16, // Increased font size
+                            fontSize: 16, 
                             fontWeight: FontWeight.w800, // Made text bolder
                           ),
                           textAlign: TextAlign.center,
@@ -333,7 +331,7 @@ class _CashierState extends State<Cashier> {
                         onRemoveFromCart: removeFromCart,
                         onUpdateQuantity: updateQuantity,
                         onClearCart: clearCart,
-                        onShowPayment: () {},
+                        // onShowPayment: () {},
                         //  _showPaymentDialog,
                         onCloseCart: () {
                           setState(() {
