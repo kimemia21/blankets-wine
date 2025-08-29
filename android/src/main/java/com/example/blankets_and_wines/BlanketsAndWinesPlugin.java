@@ -640,11 +640,18 @@ private void getDeviceInfo(Result result) {
                 // Print date and time
                 String date = (String) receiptData.get("date");
                 String time = (String) receiptData.get("time");
-                if (date != null && !date.trim().isEmpty()) {
-                    mPrinter.setPrintAppendString("Date: " + date, normalFormat);
-                }
-                if (time != null && !time.trim().isEmpty()) {
-                    mPrinter.setPrintAppendString("Time: " + time, normalFormat);
+                if ((date != null && !date.trim().isEmpty()) || (time != null && !time.trim().isEmpty())) {
+                    String dateTimeLine = "";
+                    if (date != null && !date.trim().isEmpty()) {
+                        dateTimeLine += "Date: " + date;
+                    }
+                    if (time != null && !time.trim().isEmpty()) {
+                        if (!dateTimeLine.isEmpty()) {
+                            dateTimeLine += ":"; // Add spacing between date and time
+                        }
+                        dateTimeLine +=time;
+                    }
+                    mPrinter.setPrintAppendString(dateTimeLine, normalFormat);
                 }
                 
                 // Print separator
@@ -652,7 +659,7 @@ private void getDeviceInfo(Result result) {
                 mPrinter.setPrintAppendString(separator, normalFormat);
                 
                 // Print column headers
-                mPrinter.setPrintAppendString("ITEM            QTY    AMOUNT", boldFormat);
+                mPrinter.setPrintAppendString("ITEM   QTY    KSHS", boldFormat);
                 mPrinter.setPrintAppendString(separator, normalFormat);
                 
                 // Print items
@@ -672,7 +679,7 @@ private void getDeviceInfo(Result result) {
                         
                         // Format line
                         String itemLine = String.format("%-15s %3sx %9s", 
-                            itemName, quantity, "Kshs " + price);
+                            itemName, quantity, price);
                         mPrinter.setPrintAppendString(itemLine, mediaFormat);
                     }
                 }
@@ -717,7 +724,7 @@ private void getDeviceInfo(Result result) {
                 
                 // Footer messages
                 mPrinter.setPrintAppendString("", smallFormat);
-                mPrinter.setPrintAppendString("Thank you for your visit!", smallFormat);
+                mPrinter.setPrintAppendString("We are glad you are here", smallFormat);
                 mPrinter.setPrintAppendString("Enjoy responsibly!", smallFormat);
                 
                 // Spacing before QR code
@@ -748,8 +755,8 @@ private void getDeviceInfo(Result result) {
                 }
                 
                 // Add QR code to receipt
-                mPrinter.setPrintAppendString("Scan QR Code:", normalFormat);
-                mPrinter.setPrintAppendString("", smallFormat);
+               
+        
                 
                 mPrinter.setPrintAppendQRCode(finalOrderNumber, qrSize, qrSize, Layout.Alignment.ALIGN_CENTER);
                 
@@ -760,7 +767,7 @@ private void getDeviceInfo(Result result) {
                 // Print order number section
                 String doubleSeparator = "================================";
                 mPrinter.setPrintAppendString(doubleSeparator, smallFormat);
-                mPrinter.setPrintAppendString("ORDER NUMBER", subHeaderFormat);
+        
                 mPrinter.setPrintAppendString(finalOrderNumber, orderNumberFormat);
                 mPrinter.setPrintAppendString(doubleSeparator, smallFormat);
                 

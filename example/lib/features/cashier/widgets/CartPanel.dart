@@ -80,7 +80,7 @@ class _CartPanelState extends State<CartPanel> {
   orderNumber, 
   _calculatedTotal, 
 
-  false, // isOffline
+  true, // isOffline
   onPaymentComplete: _handlePaymentComplete,
   onOrderNumberGenerated: (String orderNumber) {
     // Your order number handling logic here
