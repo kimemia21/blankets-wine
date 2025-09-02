@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:blankets_and_wines/blankets_and_wines.dart';
+import 'package:blankets_and_wines_example/OFFLINE/SaveTransaction.dart';
+import 'package:blankets_and_wines_example/OFFLINE/TranctionsPrintService.dart';
 import 'package:blankets_and_wines_example/core/constants.dart';
 import 'package:blankets_and_wines_example/core/theme/theme.dart';
 import 'package:blankets_and_wines_example/core/utils/ToastService.dart';
 import 'package:blankets_and_wines_example/core/utils/initializers.dart';
 import 'package:blankets_and_wines_example/core/utils/sdkinitializer.dart';
+import 'package:blankets_and_wines_example/data/models/Transaction.dart';
 import 'package:blankets_and_wines_example/features/cashier/functions/fetchDrinks.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -18,7 +21,6 @@ class PaymentDialogWidget extends StatefulWidget {
   final bool isOffline;
   final Function() onPaymentComplete;
   final Function(String) onOrderNumberGenerated;
-
 
   const PaymentDialogWidget({
     Key? key,
@@ -36,7 +38,7 @@ class PaymentDialogWidget extends StatefulWidget {
 class _PaymentDialogWidgetState extends State<PaymentDialogWidget> {
   late TextEditingController phoneController;
   late TextEditingController transactionController;
-  
+
   bool _isProcessing = false;
   Timer? _paymentTimer;
   int _checkAttempts = 0;
@@ -67,23 +69,26 @@ class _PaymentDialogWidgetState extends State<PaymentDialogWidget> {
     try {
       // Process offline payment and print receipt
       await _printReceipt(widget.orderNumber, "Offline M-Pesa");
-      
+
       Navigator.pop(context);
       _showSuccessDialog(widget.orderNumber);
       widget.onPaymentComplete();
-      
-      ToastService.showSuccess('Offline payment completed with transaction: ${transactionController.text.trim()}');
+
+      ToastService.showSuccess(
+        'Offline payment completed with transaction: ${transactionController.text.trim()}',
+      );
     } catch (e) {
-      ToastService.showError('Error processing offline payment: ${e.toString()}');
+      ToastService.showError(
+        'Error processing offline payment: ${e.toString()}',
+      );
     }
   }
 
   Future<void> _processOnlinePayment() async {
     setState(() {
       _isProcessing = true;
-      
     });
-    
+
     try {
       // Send M-Pesa prompt
       final result = await CashierFunctions.SendSdkPush({
@@ -112,7 +117,7 @@ class _PaymentDialogWidgetState extends State<PaymentDialogWidget> {
 
   void _startPaymentCheck() {
     _checkAttempts = 0;
-    
+
     _paymentTimer = Timer.periodic(Duration(seconds: 1), (timer) async {
       if (!mounted) {
         timer.cancel();
@@ -122,7 +127,7 @@ class _PaymentDialogWidgetState extends State<PaymentDialogWidget> {
       setState(() {
         _checkAttempts++;
       });
-      
+
       if (_checkAttempts > MAX_ATTEMPTS) {
         timer.cancel();
         setState(() {
@@ -133,13 +138,15 @@ class _PaymentDialogWidgetState extends State<PaymentDialogWidget> {
       }
 
       try {
-        final confirmed = await CashierFunctions.confirmPayment(widget.orderNumber);
+        final confirmed = await CashierFunctions.confirmPayment(
+          widget.orderNumber,
+        );
         if (confirmed) {
           timer.cancel();
           setState(() {
             _isProcessing = false;
           });
-          
+
           await _printReceipt(widget.orderNumber, "M-Pesa");
           Navigator.pop(context);
           _showSuccessDialog(widget.orderNumber);
@@ -152,102 +159,151 @@ class _PaymentDialogWidgetState extends State<PaymentDialogWidget> {
     });
   }
 
-  Future<void> _printReceipt(String orderNumber, String paymentMethod) async {
-    try {
-      setState(() {
-       _isProcessing = true;
-      });
-      sdkInitializer();
-      await SmartposPlugin.printReceipt({
+Future<void> _printReceipt(String orderNumber, String paymentMethod) async {
+  try {
+    setState(() {
+      _isProcessing = true;
+    });
+
+    // Make sure sdkInitializer is awaited if it's async
+    await sdkInitializer();
+
+    // Build the transaction object
+    final transaction = Transaction.fromReceiptData(
+      {
         "storeName": "Blankets Bar",
-        "receiptType": userData.userRole == "Cashier" ? "Sale Receipt" : "Stockist Receipt",
+        "receiptType": userData.userRole == "Cashier"
+            ? "Sale Receipt"
+            : "Stockist Receipt",
         "date": DateFormat('yyyy-MM-dd').format(DateTime.now()),
         "time": DateFormat('HH:mm:ss').format(DateTime.now()),
         "orderNumber": orderNumber,
-        "items": cartG.items.map((item) => {
-          "name": item.drink.name,
-          "quantity": item.quantity,
-          "price": item.totalPrice.toStringAsFixed(2),
-        }).toList(),
+        "items": cartG.items
+            .map(
+              (item) => {
+                "name": item.drink.name,
+                "quantity": item.quantity,
+                "price": item.totalPrice.toStringAsFixed(2),
+              },
+            )
+            .toList(),
         "subtotal": cartG.total.toStringAsFixed(2),
         "tax": "0.00",
         "total": cartG.total.toStringAsFixed(2),
         "paymentMethod": paymentMethod,
-      });
-      
-        setState(() {
-       _isProcessing = false;
-      });
-      // Emit order created event for online orders only
-      if (paymentMethod != "Offline M-Pesa") {
-        final socket = IO.io('ws://10.68.102.36:8002');
-        socket.onConnect((_) => socket.emit('order_created', {"barId": appUser.barId}));
-        socket.dispose();
-      }
-    } catch (e) {
-      print("Print error: $e");
+      },
+      userData.username, // Seller name
+      lastDigits: paymentMethod == "Card" ? "1234" : null, // Optional last digits
+    );
+
+    // Save the transaction
+    await TransactionService.saveTransaction(transaction);
+
+    // Get all transactions (await if it's async)
+    final allTransactions = await TransactionService.getAllTransactions();
+
+    // Print the transaction report
+    await TransactionReportPrinterService.printSellerReport(
+      allTransactions,
+      userData.username,
+      storeName: "Blankets Bar",
+      generatedBy: userData.username,
+    );
+
+    setState(() {
+      _isProcessing = false;
+    });
+
+    // Emit order created event for online orders only
+    if (paymentMethod != "Offline M-Pesa") {
+      final socket = IO.io('ws://10.68.102.36:8002');
+      socket.onConnect(
+        (_) => socket.emit('order_created', {"barId": appUser.barId}),
+      );
+      socket.dispose();
     }
+  } catch (e, s) {
+    print("Print error: $e");
+    print("Stack trace: $s");
   }
+}
 
   void _showSuccessDialog(String orderNumber) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => Dialog(
-        insetPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        child: Container(
-          width: double.infinity,
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width - 32,
-          ),
-          padding: EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.check_circle, color: BarPOSTheme.successColor, size: 48),
-              SizedBox(height: 16),
-              Text(
-                'Payment Complete',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
+      builder:
+          (context) => Dialog(
+            insetPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            child: Container(
+              width: double.infinity,
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width - 32,
               ),
-              SizedBox(height: 20),
-              Text(
-                'Order: $orderNumber', 
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 8),
-              Text(
-                'KSH ${formatWithCommas(widget.total.toStringAsFixed(0))}',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: BarPOSTheme.successColor),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 16),
-              Text(
-                'Receipt printed. Ready for next customer.', 
-                style: TextStyle(color: Colors.grey[600]),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: BarPOSTheme.successColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 2,
+              padding: EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    color: BarPOSTheme.successColor,
+                    size: 48,
                   ),
-                  child: Text('Next Customer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                ),
+                  SizedBox(height: 16),
+                  Text(
+                    'Payment Complete',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 20),
+                  Text(
+                    'Order: $orderNumber',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'KSH ${formatWithCommas(widget.total.toStringAsFixed(0))}',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: BarPOSTheme.successColor,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'Receipt printed. Ready for next customer.',
+                    style: TextStyle(color: Colors.grey[600]),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: BarPOSTheme.successColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                      ),
+                      child: Text(
+                        'Next Customer',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
     );
   }
 
@@ -282,8 +338,13 @@ class _PaymentDialogWidgetState extends State<PaymentDialogWidget> {
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        widget.isOffline ? 'Offline M-Pesa Payment' : 'M-Pesa Payment',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        widget.isOffline
+                            ? 'Offline M-Pesa Payment'
+                            : 'M-Pesa Payment',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     IconButton(
@@ -295,14 +356,15 @@ class _PaymentDialogWidgetState extends State<PaymentDialogWidget> {
                   ],
                 ),
               ),
-              
+
               // Content
               Flexible(
                 child: SingleChildScrollView(
                   padding: EdgeInsets.all(20),
-                  child: widget.isOffline 
-                      ? _buildOfflinePaymentForm()
-                      : _buildOnlinePaymentForm(),
+                  child:
+                      widget.isOffline
+                          ? _buildOfflinePaymentForm()
+                          : _buildOnlinePaymentForm(),
                 ),
               ),
             ],
@@ -318,7 +380,7 @@ class _PaymentDialogWidgetState extends State<PaymentDialogWidget> {
       children: [
         _buildOrderSummary(),
         SizedBox(height: 20),
-        
+
         // Customer Phone (optional for offline)
         TextField(
           controller: phoneController,
@@ -334,9 +396,9 @@ class _PaymentDialogWidgetState extends State<PaymentDialogWidget> {
             contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           ),
         ),
-        
+
         SizedBox(height: 16),
-        
+
         // Transaction ID Input
         TextField(
           controller: transactionController,
@@ -351,26 +413,45 @@ class _PaymentDialogWidgetState extends State<PaymentDialogWidget> {
             contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           ),
         ),
-        
+
         SizedBox(height: 24),
-        
+
         SizedBox(
           width: double.infinity,
           height: 50,
-          child:_isProcessing?Center(child:  CircularProgressIndicator()) : ElevatedButton(
-            onPressed: transactionController.text.trim().isNotEmpty
-                ? _processOfflinePayment
-                : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: transactionController.text.trim().isNotEmpty ? Colors.green : Colors.grey[300],
-              foregroundColor: transactionController.text.trim().isNotEmpty ? Colors.white : Colors.grey[600],
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: transactionController.text.trim().isNotEmpty ? 2 : 0,
-              disabledBackgroundColor: Colors.grey[300],
-              disabledForegroundColor: Colors.grey[600],
-            ),
-            child: Text('Complete Order', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-          ),
+          child:
+              _isProcessing
+                  ? Center(child: CircularProgressIndicator())
+                  : ElevatedButton(
+                    onPressed:
+                        transactionController.text.trim().isNotEmpty
+                            ? _processOfflinePayment
+                            : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          transactionController.text.trim().isNotEmpty
+                              ? Colors.green
+                              : Colors.grey[300],
+                      foregroundColor:
+                          transactionController.text.trim().isNotEmpty
+                              ? Colors.white
+                              : Colors.grey[600],
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation:
+                          transactionController.text.trim().isNotEmpty ? 2 : 0,
+                      disabledBackgroundColor: Colors.grey[300],
+                      disabledForegroundColor: Colors.grey[600],
+                    ),
+                    child: Text(
+                      'Complete Order',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
         ),
       ],
     );
@@ -382,7 +463,7 @@ class _PaymentDialogWidgetState extends State<PaymentDialogWidget> {
       children: [
         _buildOrderSummary(),
         SizedBox(height: 20),
-        
+
         if (!_isProcessing) ...[
           TextField(
             controller: phoneController,
@@ -394,12 +475,17 @@ class _PaymentDialogWidgetState extends State<PaymentDialogWidget> {
             onChanged: (value) => setState(() {}),
             decoration: InputDecoration(
               labelText: 'Customer Phone Number',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: Colors.green, width: 2),
               ),
-              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 16,
+              ),
             ),
           ),
           SizedBox(height: 24),
@@ -407,23 +493,35 @@ class _PaymentDialogWidgetState extends State<PaymentDialogWidget> {
             width: double.infinity,
             height: 50,
             child: ElevatedButton(
-              onPressed: phoneController.text.trim().length >= 9
-                  ? _processOnlinePayment
-                  : null,
+              onPressed:
+                  phoneController.text.trim().length >= 9
+                      ? _processOnlinePayment
+                      : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: phoneController.text.trim().length >= 9 ? Colors.green : Colors.grey[300],
-                foregroundColor: phoneController.text.trim().length >= 9 ? Colors.white : Colors.grey[600],
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                backgroundColor:
+                    phoneController.text.trim().length >= 9
+                        ? Colors.green
+                        : Colors.grey[300],
+                foregroundColor:
+                    phoneController.text.trim().length >= 9
+                        ? Colors.white
+                        : Colors.grey[600],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 elevation: phoneController.text.trim().length >= 9 ? 2 : 0,
                 disabledBackgroundColor: Colors.grey[300],
                 disabledForegroundColor: Colors.grey[600],
               ),
-              child: Text('Send Payment Request', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              child: Text(
+                'Send Payment Request',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
             ),
           ),
         ] else ...[
           _buildProcessingWidget(),
-        ]
+        ],
       ],
     );
   }
@@ -442,10 +540,13 @@ class _PaymentDialogWidgetState extends State<PaymentDialogWidget> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Order ID:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+              Text(
+                'Order ID:',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+              ),
               Flexible(
                 child: Text(
-                  widget.orderNumber, 
+                  widget.orderNumber,
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -456,10 +557,17 @@ class _PaymentDialogWidgetState extends State<PaymentDialogWidget> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Total:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+              Text(
+                'Total:',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+              ),
               Text(
                 'KSH ${formatWithCommas(widget.total.toStringAsFixed(0))}',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green[700]),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green[700],
+                ),
               ),
             ],
           ),
@@ -483,12 +591,16 @@ class _PaymentDialogWidgetState extends State<PaymentDialogWidget> {
           ),
           SizedBox(height: 20),
           Text(
-            'Processing payment...', 
-            style: TextStyle(fontSize: 16, color: Colors.blue[600], fontWeight: FontWeight.w500),
+            'Processing payment...',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.blue[600],
+              fontWeight: FontWeight.w500,
+            ),
           ),
           SizedBox(height: 8),
           Text(
-            'Attempt $_checkAttempts/$MAX_ATTEMPTS', 
+            'Attempt $_checkAttempts/$MAX_ATTEMPTS',
             style: TextStyle(fontSize: 13, color: Colors.grey[600]),
           ),
         ],
@@ -499,9 +611,9 @@ class _PaymentDialogWidgetState extends State<PaymentDialogWidget> {
 
 // Helper function to show the payment dialog
 void showPaymentDialog(
-  BuildContext context, 
-  String orderNumber, 
-  double total, 
+  BuildContext context,
+  String orderNumber,
+  double total,
   bool isOffline, {
   required Function() onPaymentComplete,
   required Function(String) onOrderNumberGenerated,
@@ -509,12 +621,13 @@ void showPaymentDialog(
   showDialog(
     context: context,
     barrierDismissible: false,
-    builder: (context) => PaymentDialogWidget(
-      orderNumber: orderNumber,
-      total: total,
-      isOffline: isOffline,
-      onPaymentComplete: onPaymentComplete,
-      onOrderNumberGenerated: onOrderNumberGenerated,
-    ),
+    builder:
+        (context) => PaymentDialogWidget(
+          orderNumber: orderNumber,
+          total: total,
+          isOffline: isOffline,
+          onPaymentComplete: onPaymentComplete,
+          onOrderNumberGenerated: onOrderNumberGenerated,
+        ),
   );
 }

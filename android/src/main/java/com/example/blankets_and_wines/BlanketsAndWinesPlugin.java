@@ -218,10 +218,15 @@ private EditText scanResultEditText;
                 Integer qrSize = call.argument("size");
                 printQRCode(qrData, qrSize != null ? qrSize : 200, result);
                 break;
+
             case "printBarcode":
                 String barcodeData = call.argument("data");
                 printBarcode(barcodeData, result);
                 break;
+            case "printTransactionReport":
+                Map<String, Object> reportData = call.argument("reportData");
+                printTransactionReport(reportData, result);
+                break;    
             case "cutPaper":
                 cutPaper(result);
                 break;
@@ -815,6 +820,257 @@ private void getDeviceInfo(Result result) {
             }
         });
     }
+
+
+    private void printTransactionReport(Map<String, Object> reportData, Result result) {
+    if (!checkDeviceReady(result)) return;
+    
+    if (reportData == null) {
+        result.error("INVALID_INPUT", "Report data cannot be null", null);
+        return;
+    }
+    
+    executor.execute(() -> {
+        try {
+            int printStatus = mPrinter.getPrinterStatus();
+            if (printStatus == SdkResult.SDK_PRN_STATUS_PAPEROUT) {
+                throw new Exception("Out of paper");
+            }
+            
+            // Create format objects for different text styles
+            PrnStrFormat titleFormat = new PrnStrFormat();
+            titleFormat.setTextSize(45);
+            titleFormat.setAli(Layout.Alignment.ALIGN_CENTER);
+            titleFormat.setStyle(PrnTextStyle.BOLD);
+            titleFormat.setFont(PrnTextFont.SANS_SERIF);
+            
+            PrnStrFormat headerFormat = new PrnStrFormat();
+            headerFormat.setTextSize(35);
+            headerFormat.setAli(Layout.Alignment.ALIGN_CENTER);
+            headerFormat.setStyle(PrnTextStyle.BOLD);
+            headerFormat.setFont(PrnTextFont.SANS_SERIF);
+            
+            PrnStrFormat subHeaderFormat = new PrnStrFormat();
+            subHeaderFormat.setTextSize(28);
+            subHeaderFormat.setAli(Layout.Alignment.ALIGN_NORMAL);
+            subHeaderFormat.setStyle(PrnTextStyle.BOLD);
+            subHeaderFormat.setFont(PrnTextFont.MONOSPACE);
+            
+            PrnStrFormat normalFormat = new PrnStrFormat();
+            normalFormat.setTextSize(22);
+            normalFormat.setStyle(PrnTextStyle.NORMAL);
+            normalFormat.setFont(PrnTextFont.MONOSPACE);
+            normalFormat.setAli(Layout.Alignment.ALIGN_NORMAL);
+            
+            PrnStrFormat smallFormat = new PrnStrFormat();
+            smallFormat.setTextSize(20);
+            smallFormat.setStyle(PrnTextStyle.NORMAL);
+            smallFormat.setFont(PrnTextFont.MONOSPACE);
+            smallFormat.setAli(Layout.Alignment.ALIGN_NORMAL);
+            
+            PrnStrFormat boldFormat = new PrnStrFormat();
+            boldFormat.setTextSize(24);
+            boldFormat.setStyle(PrnTextStyle.BOLD);
+            boldFormat.setFont(PrnTextFont.MONOSPACE);
+            boldFormat.setAli(Layout.Alignment.ALIGN_NORMAL);
+            
+            // Print report header
+            String storeName = (String) reportData.get("storeName");
+            if (storeName != null && !storeName.trim().isEmpty()) {
+                mPrinter.setPrintAppendString(storeName, titleFormat);
+            } else {
+                mPrinter.setPrintAppendString("Blankets And Wine", titleFormat);
+            }
+            
+            // Print report title
+            String reportTitle = (String) reportData.get("reportTitle");
+            if (reportTitle != null && !reportTitle.trim().isEmpty()) {
+                mPrinter.setPrintAppendString(reportTitle, headerFormat);
+            } else {
+                mPrinter.setPrintAppendString("TRANSACTION REPORT", headerFormat);
+            }
+            
+            mPrinter.setPrintAppendString("", normalFormat); // Empty line
+            
+            // Print date range
+            String dateRange = (String) reportData.get("dateRange");
+            if (dateRange != null && !dateRange.trim().isEmpty()) {
+                mPrinter.setPrintAppendString("Period: " + dateRange, normalFormat);
+            }
+            
+            // Print generation timestamp
+            String generatedAt = (String) reportData.get("generatedAt");
+            if (generatedAt != null && !generatedAt.trim().isEmpty()) {
+                mPrinter.setPrintAppendString("Generated: " + generatedAt, smallFormat);
+            }
+            
+            // Print separator
+            String separator = "================================";
+            mPrinter.setPrintAppendString(separator, normalFormat);
+            
+            // Print summary section
+            String totalTransactions = (String) reportData.get("totalTransactions");
+            String totalSales = (String) reportData.get("totalSales");
+            String averageTransaction = (String) reportData.get("averageTransaction");
+            
+            if (totalTransactions != null || totalSales != null) {
+                mPrinter.setPrintAppendString("SUMMARY", subHeaderFormat);
+                mPrinter.setPrintAppendString("", normalFormat);
+                
+                if (totalTransactions != null) {
+                    String transLine = String.format("%-20s %12s", "Transactions:", totalTransactions);
+                    mPrinter.setPrintAppendString(transLine, normalFormat);
+                }
+                
+                if (totalSales != null) {
+                    String salesLine = String.format("%-20s %12s", "Total Sales:", "Kshs " + totalSales);
+                    mPrinter.setPrintAppendString(salesLine, boldFormat);
+                }
+                
+                if (averageTransaction != null) {
+                    String avgLine = String.format("%-20s %12s", "Average Sale:", "Kshs " + averageTransaction);
+                    mPrinter.setPrintAppendString(avgLine, normalFormat);
+                }
+                
+                mPrinter.setPrintAppendString(separator, normalFormat);
+            }
+            
+            // Print transactions list
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> transactions = (List<Map<String, Object>>) reportData.get("transactions");
+            
+            if (transactions != null && !transactions.isEmpty()) {
+                mPrinter.setPrintAppendString("TRANSACTIONS", subHeaderFormat);
+                mPrinter.setPrintAppendString("", normalFormat);
+                
+                // Column headers
+                mPrinter.setPrintAppendString("DATE/TIME    SELLER      AMOUNT", boldFormat);
+                String thinSeparator = "--------------------------------";
+                mPrinter.setPrintAppendString(thinSeparator, normalFormat);
+                
+                for (Map<String, Object> transaction : transactions) {
+                    String dateTime = (String) transaction.get("dateTime");
+                    String seller = (String) transaction.get("seller");
+                    String amount = (String) transaction.get("amount");
+                    String id = (String) transaction.get("id");
+                    
+                    // Handle null values and format
+                    if (dateTime == null) dateTime = "N/A";
+                    if (seller == null) seller = "Unknown";
+                    if (amount == null) amount = "0.00";
+                    
+                    // Truncate long seller names
+                    if (seller.length() > 10) {
+                        seller = seller.substring(0, 8) + "..";
+                    }
+                    
+                    // Format transaction line
+                    if (dateTime.length() > 12) {
+                        dateTime = dateTime.substring(0, 12);
+                    }
+                    
+                    String transactionLine = String.format("%-12s %-10s %8s", 
+                        dateTime, seller, "Kshs " + amount);
+                    mPrinter.setPrintAppendString(transactionLine, smallFormat);
+                    
+                    // Print transaction ID on next line if available
+                    if (id != null && !id.trim().isEmpty()) {
+                        String idLine = String.format("  ID: %s", id);
+                        mPrinter.setPrintAppendString(idLine, smallFormat);
+                    }
+                    
+                    mPrinter.setPrintAppendString("", smallFormat); // Small gap between transactions
+                }
+                
+                mPrinter.setPrintAppendString(separator, normalFormat);
+            }
+            
+            // Print seller breakdown if available
+            @SuppressWarnings("unchecked")
+            Map<String, Object> sellerBreakdown = (Map<String, Object>) reportData.get("sellerBreakdown");
+            
+            if (sellerBreakdown != null && !sellerBreakdown.isEmpty()) {
+                mPrinter.setPrintAppendString("SELLER BREAKDOWN", subHeaderFormat);
+                mPrinter.setPrintAppendString("", normalFormat);
+                
+                mPrinter.setPrintAppendString("SELLER          SALES      COUNT", boldFormat);
+                String thinSeparator = "--------------------------------";
+                mPrinter.setPrintAppendString(thinSeparator, normalFormat);
+                
+                for (Map.Entry<String, Object> entry : sellerBreakdown.entrySet()) {
+                    String sellerName = entry.getKey();
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> sellerData = (Map<String, Object>) entry.getValue();
+                    
+                    String sales = (String) sellerData.get("totalSales");
+                    String count = (String) sellerData.get("transactionCount");
+                    
+                    if (sellerName.length() > 14) {
+                        sellerName = sellerName.substring(0, 12) + "..";
+                    }
+                    
+                    String sellerLine = String.format("%-14s %8s %7s", 
+                        sellerName, 
+                        sales != null ? "Kshs " + sales : "0", 
+                        count != null ? count : "0");
+                    mPrinter.setPrintAppendString(sellerLine, normalFormat);
+                }
+                
+                mPrinter.setPrintAppendString(separator, normalFormat);
+            }
+            
+            // Print footer information
+            String generatedBy = (String) reportData.get("generatedBy");
+            if (generatedBy != null && !generatedBy.trim().isEmpty()) {
+                mPrinter.setPrintAppendString("", normalFormat);
+                mPrinter.setPrintAppendString("Generated by: " + generatedBy, smallFormat);
+            }
+            
+            mPrinter.setPrintAppendString("", normalFormat);
+            mPrinter.setPrintAppendString("*** END OF REPORT ***", smallFormat);
+            
+            // Extra spacing for easy handling
+            mPrinter.setPrintAppendString("", normalFormat);
+            mPrinter.setPrintAppendString("", normalFormat);
+            mPrinter.setPrintAppendString("", normalFormat);
+            
+            // Add line feeds for complete printing
+            try {
+                mPrinter.setPrintAppendString("\n", smallFormat);
+                mPrinter.setPrintAppendString("\n", smallFormat);
+            } catch (Exception e) {
+                Log.w(TAG, "Line feeds not supported", e);
+            }
+            
+            // Start printing
+            int result_code = mPrinter.setPrintStart();
+            
+            // Add delay to ensure printing completes
+            Thread.sleep(2000);
+            
+            // Check final printer status
+            int finalStatus = mPrinter.getPrinterStatus();
+            Log.d(TAG, "Final printer status: " + finalStatus);
+            
+            mainHandler.post(() -> {
+                if (result_code == SdkResult.SDK_OK) {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("success", true);
+                    response.put("message", "Transaction report printed successfully");
+                    result.success(response);
+                } else {
+                    result.error("PRINT_ERROR", "Print failed with code: " + result_code, null);
+                }
+            });
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to print transaction report", e);
+            mainHandler.post(() -> {
+                result.error("PRINT_ERROR", "Failed to print report: " + e.getMessage(), null);
+            });
+        }
+    });
+}
 
     private void printQRCode(String data, int size, Result result) {
         if (!checkDeviceReady(result)) return;

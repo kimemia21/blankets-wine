@@ -13,5 +13,7 @@ class HiveTypeId {
   static const productCategory = 21;
   static const  restock = 22;
   static const productChangeLog = 23;
+  static const transaction = 24;
+  static const transactionItem = 25;
 
 }

@@ -365,7 +365,7 @@ class _RestockPageState extends State<RestockPage> with TickerProviderStateMixin
       children: [
         Expanded(
           child: Text(
-            '${_selectedProduct!.name} (ID: ${_selectedProduct!.id})',
+            '${_selectedProduct!.name} ',
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -518,7 +518,7 @@ class _RestockPageState extends State<RestockPage> with TickerProviderStateMixin
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 4),
-        Text('ID: ${product.id} • ${_getCategoryName(product.category)}'),
+        Text('${_getCategoryName(product.category)}'),
         if (product.lastModified != null) ...[
           const SizedBox(height: 2),
           Text(

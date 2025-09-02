@@ -1,5 +1,7 @@
 import 'package:blankets_and_wines_example/data/models/ProductChangeLog.dart';
 import 'package:blankets_and_wines_example/data/models/Restock.dart';
+import 'package:blankets_and_wines_example/data/models/Transaction.dart';
+import 'package:blankets_and_wines_example/data/models/TransactionsItem.dart';
 import 'package:hive/hive.dart';
 
 // Import all generated adapters
@@ -37,6 +39,12 @@ class HiveAdapters {
     if (!Hive.isAdapterRegistered(ProductChangeLogAdapter().typeId)) {
       Hive.registerAdapter(ProductChangeLogAdapter());
     }
+    if (!Hive.isAdapterRegistered(TransactionAdapter().typeId)) {
+      Hive.registerAdapter(TransactionAdapter());
+    } 
+    if (!Hive.isAdapterRegistered(TransactionItemAdapter().typeId)) {
+      Hive.registerAdapter(TransactionItemAdapter());
+    }
   }
 
   static Future<void> openAllBoxes() async {
@@ -48,7 +56,12 @@ class HiveAdapters {
     await Hive.openBox<UserData>('users');
     await Hive.openBox<Restock>('restock');
     await Hive.openBox<ProductChangeLog>('productChangeLogs');
+
     await Hive.openBox('metadata');
+    await Hive.openBox<Transaction>('transactions');
+    await Hive.openBox<TransactionItem>('transactionItems');
+    
+
   }
 
   static Future<void> init() async {
