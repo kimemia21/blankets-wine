@@ -148,6 +148,10 @@ class _CashierState extends State<Cashier> {
               setState(() {
                 istappedThree++;
                 if (istappedThree >= 3) {
+                  // SmartposPlugin.
+
+
+
                   Navigator.pushReplacement(context,
                       MaterialPageRoute(builder: (context) => RestockPage()));
 

@@ -12,6 +12,7 @@ class SmartposPlugin {
   // Method channel for communication with native Android code
   static const MethodChannel _channel = MethodChannel('smartpos_plugin');
   
+  
 
   // ==================== BASIC DEVICE OPERATIONS ====================
   
@@ -97,6 +98,9 @@ static Future<Map<String, dynamic>> showTextOnLcd({
       };
     }
   }
+
+
+  
   
   /// Get detailed device information
   static Future<DeviceInfo> getDeviceInfo() async {

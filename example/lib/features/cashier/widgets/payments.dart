@@ -159,74 +159,105 @@ class _PaymentDialogWidgetState extends State<PaymentDialogWidget> {
     });
   }
 
-Future<void> _printReceipt(String orderNumber, String paymentMethod) async {
-  try {
-    setState(() {
-      _isProcessing = true;
-    });
+  Future<void> _printReceipt(String orderNumber, String paymentMethod) async {
+    try {
+      setState(() {
+        _isProcessing = true;
+      });
 
-    // Make sure sdkInitializer is awaited if it's async
-    await sdkInitializer();
+      // Make sure sdkInitializer is awaited if it's async
+      await sdkInitializer();
 
-    // Build the transaction object
-    final transaction = Transaction.fromReceiptData(
-      {
+      // Build the transaction object
+      // final transaction = Transaction.fromReceiptData(
+      //   {
+      //     "storeName": "Blankets Bar",
+      //     "receiptType":
+      //         userData.userRole == "Cashier"
+      //             ? "Sale Receipt"
+      //             : "Stockist Receipt",
+      //     "date": DateFormat('yyyy-MM-dd').format(DateTime.now()),
+      //     "time": DateFormat('HH:mm:ss').format(DateTime.now()),
+      //     "orderNumber": orderNumber,
+      //     "items":
+      //         cartG.items
+      //             .map(
+      //               (item) => {
+      //                 "name": item.drink.name,
+      //                 "quantity": item.quantity,
+      //                 "price": item.totalPrice.toStringAsFixed(2),
+      //               },
+      //             )
+      //             .toList(),
+      //     "subtotal": cartG.total.toStringAsFixed(2),
+      //     "tax": "0.00",
+      //     "total": cartG.total.toStringAsFixed(2),
+      //     "paymentMethod": paymentMethod,
+      //   },
+      //   userData.username, // Seller name
+      //   lastDigits:
+      //       paymentMethod == "Card" ? "1234" : null, // Optional last digits
+      // );
+
+      SmartposPlugin.printReceipt({
         "storeName": "Blankets Bar",
-        "receiptType": userData.userRole == "Cashier"
-            ? "Sale Receipt"
-            : "Stockist Receipt",
+        "receiptType":
+            userData.userRole == "Cashier"
+                ? "Sale Receipt"
+                : "Stockist Receipt",
         "date": DateFormat('yyyy-MM-dd').format(DateTime.now()),
         "time": DateFormat('HH:mm:ss').format(DateTime.now()),
         "orderNumber": orderNumber,
-        "items": cartG.items
-            .map(
-              (item) => {
-                "name": item.drink.name,
-                "quantity": item.quantity,
-                "price": item.totalPrice.toStringAsFixed(2),
-              },
-            )
-            .toList(),
+        "items":
+            cartG.items
+                .map(
+                  (item) => {
+                    "name": item.drink.name,
+                    "quantity": item.quantity,
+                    "price": item.totalPrice.toStringAsFixed(2),
+                  },
+                )
+                .toList(),
         "subtotal": cartG.total.toStringAsFixed(2),
         "tax": "0.00",
         "total": cartG.total.toStringAsFixed(2),
         "paymentMethod": paymentMethod,
-      },
-      userData.username, // Seller name
-      lastDigits: paymentMethod == "Card" ? "1234" : null, // Optional last digits
-    );
+      });
 
-    // Save the transaction
-    await TransactionService.saveTransaction(transaction);
 
-    // Get all transactions (await if it's async)
-    final allTransactions = await TransactionService.getAllTransactions();
 
-    // Print the transaction report
-    await TransactionReportPrinterService.printSellerReport(
-      allTransactions,
-      userData.username,
-      storeName: "Blankets Bar",
-      generatedBy: userData.username,
-    );
 
-    setState(() {
-      _isProcessing = false;
-    });
+      // Save the transaction
+      // await TransactionService.saveTransaction(transaction);
 
-    // Emit order created event for online orders only
-    if (paymentMethod != "Offline M-Pesa") {
-      final socket = IO.io('ws://10.68.102.36:8002');
-      socket.onConnect(
-        (_) => socket.emit('order_created', {"barId": appUser.barId}),
-      );
-      socket.dispose();
+      // // Get all transactions (await if it's async)
+      // final allTransactions = await TransactionService.getAllTransactions();
+
+      // // Print the transaction report
+      // await TransactionReportPrinterService.printSellerReport(
+      //   allTransactions,
+      //   userData.username,
+      //   storeName: "Blankets Bar",
+      //   generatedBy: userData.username,
+      // );
+
+      setState(() {
+        _isProcessing = false;
+      });
+
+      // Emit order created event for online orders only
+      if (paymentMethod != "Offline M-Pesa") {
+        final socket = IO.io('ws://10.68.102.36:8002');
+        socket.onConnect(
+          (_) => socket.emit('order_created', {"barId": appUser.barId}),
+        );
+        socket.dispose();
+      }
+    } catch (e, s) {
+      print("Print error: $e");
+      print("Stack trace: $s");
     }
-  } catch (e, s) {
-    print("Print error: $e");
-    print("Stack trace: $s");
   }
-}
 
   void _showSuccessDialog(String orderNumber) {
     showDialog(
